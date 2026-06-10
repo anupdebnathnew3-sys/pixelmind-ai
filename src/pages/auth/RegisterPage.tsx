@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Zap, Mail, Lock, User, Eye, EyeOff, CheckCircle, ShieldOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { auth, googleProvider } from '../../services/firebase';
+import { auth, googleProvider, firebaseReady } from '../../services/firebase';
 import { signInWithPopup } from 'firebase/auth';
 
 export const RegisterPage: React.FC = () => {
@@ -145,9 +145,13 @@ export const RegisterPage: React.FC = () => {
             variant="outline"
             fullWidth
             onClick={async () => {
+              if (!firebaseReady) {
+                toast.error('Google sign-up is not configured yet. Please use email & password.');
+                return;
+              }
               setLoading(true);
               try {
-                const result = await signInWithPopup(auth, googleProvider);
+                const result = await signInWithPopup(auth!, googleProvider);
                 const user = result.user;
                 login({
                   id: user.uid,
