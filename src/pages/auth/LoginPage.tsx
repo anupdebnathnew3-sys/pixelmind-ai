@@ -94,7 +94,7 @@ export const LoginPage: React.FC = () => {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } else {
-      toast.error('Try: admin@pixelmind.ai/admin123 · pro@pixelmind.ai/pro123 · enterprise@pixelmind.ai/ent123 · or any email/password123');
+      toast.error('Invalid email or password. Please try again.');
     }
     setLoading(false);
   };
@@ -152,9 +152,6 @@ export const LoginPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
-          <div className="mt-14 text-sm text-white/50 font-mono bg-white/5 px-4 py-2 rounded-lg border border-white/10">
-            Demo: admin@pixelmind.ai / admin123
           </div>
         </div>
       </div>
@@ -246,11 +243,6 @@ export const LoginPage: React.FC = () => {
             <Link to="/privacy" className="text-[#6366F1] hover:underline">Privacy Policy</Link>
           </p>
 
-          <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-xs text-blue-700 dark:text-blue-300">
-            <strong>Demo credentials:</strong><br />
-            Admin: admin@pixelmind.ai / admin123<br />
-            User: any email / password123
-          </div>
         </div>
       </div>
     </div>

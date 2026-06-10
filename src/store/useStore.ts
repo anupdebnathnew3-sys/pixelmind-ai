@@ -61,7 +61,7 @@ export const useStore = create<AppState>()(
       logout: () => set({ user: null, isAuthenticated: false }),
 
       // Theme
-      theme: 'light',
+      theme: 'dark',
       toggleTheme: () =>
         set((s) => {
           const newTheme = s.theme === 'light' ? 'dark' : 'light';
