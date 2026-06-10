@@ -5,6 +5,8 @@ import { Toaster } from 'react-hot-toast';
 import { useStore } from './store/useStore';
 import { useAdminStore } from './store/useAdminStore';
 import { Shield } from 'lucide-react';
+import { firebaseReady } from './services/firebase';
+import { initFirestoreSync, pushSettingsToFirestore } from './services/firestoreSync';
 
 // Pages include their own DashboardLayout / public layout internally
 import { HomePage } from './pages/public/HomePage';
@@ -90,7 +92,7 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { theme } = useStore();
+  const { theme, user } = useStore();
   const { uiSettings } = useAdminStore();
 
   useEffect(() => {
@@ -104,6 +106,29 @@ export default function App() {
     root.style.setProperty('--color-primary', uiSettings.primaryColor);
     root.style.setProperty('--color-gradient-end', uiSettings.accentColor);
   }, [uiSettings.primaryColor, uiSettings.accentColor]);
+
+  // ── Real-time CMS sync via Firestore ──────────────────────────────────────
+  useEffect(() => {
+    if (!firebaseReady) return;
+
+    // All clients subscribe to live updates from Firestore
+    const unsubListen = initFirestoreSync((data) => {
+      useAdminStore.setState(data as unknown as Parameters<typeof useAdminStore.setState>[0]);
+    });
+
+    // Admin pushes changes to Firestore so all other clients receive them
+    const unsubStore = useAdminStore.subscribe((state) => {
+      if (user?.role === 'admin') {
+        pushSettingsToFirestore(state as unknown as Record<string, unknown>);
+      }
+    });
+
+    return () => {
+      unsubListen();
+      unsubStore();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firebaseReady, user?.role]);
 
   return (
     <>
