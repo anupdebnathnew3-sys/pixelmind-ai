@@ -5,6 +5,8 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { auth, googleProvider } from '../../services/firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 export const LoginPage: React.FC = () => {
   const { login } = useStore();
@@ -101,20 +103,29 @@ export const LoginPage: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    login({
-      id: '3',
-      name: 'Google User',
-      email: 'google@example.com',
-      role: 'user',
-      plan: 'free',
-      credits: 500,
-      createdAt: new Date().toISOString(),
-      emailVerified: true,
-      notificationsCount: 2,
-    });
-    toast.success('Logged in with Google!');
-    navigate('/dashboard');
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      login({
+        id: user.uid,
+        name: user.displayName || 'User',
+        email: user.email || '',
+        role: 'user',
+        plan: 'free',
+        credits: 500,
+        createdAt: new Date().toISOString(),
+        emailVerified: user.emailVerified,
+        notificationsCount: 0,
+        avatar: user.photoURL ?? undefined,
+      });
+      toast.success(`Welcome, ${user.displayName || 'User'}!`);
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+        toast.error('Google sign-in failed. Please try again.');
+      }
+    }
     setLoading(false);
   };
 
