@@ -22,6 +22,52 @@ function systemKeyToAPIKey(k: SystemApiKey): APIKey {
   };
 }
 
+/**
+ * Reads API keys from VITE_* environment variables baked in at build time.
+ * This makes admin-configured keys available to ALL users on ALL devices,
+ * since env vars are embedded in the JS bundle — not stored in localStorage.
+ */
+export function getEnvSystemKeys(): APIKey[] {
+  const keys: APIKey[] = [];
+  if (import.meta.env.VITE_OPENAI_API_KEY) {
+    keys.push({ id: 'env-openai', name: 'OpenAI (System)', provider: 'openai',
+      key: import.meta.env.VITE_OPENAI_API_KEY,
+      modelName: import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o',
+      status: 'connected', isDefault: keys.length === 0, isEnabled: true });
+  }
+  if (import.meta.env.VITE_GEMINI_API_KEY) {
+    keys.push({ id: 'env-gemini', name: 'Gemini (System)', provider: 'gemini',
+      key: import.meta.env.VITE_GEMINI_API_KEY,
+      modelName: import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash',
+      status: 'connected', isDefault: keys.length === 0, isEnabled: true });
+  }
+  if (import.meta.env.VITE_GROQ_API_KEY) {
+    keys.push({ id: 'env-groq', name: 'Groq (System)', provider: 'groq',
+      key: import.meta.env.VITE_GROQ_API_KEY,
+      modelName: import.meta.env.VITE_GROQ_MODEL || 'llama-3.3-70b-versatile',
+      status: 'connected', isDefault: keys.length === 0, isEnabled: true });
+  }
+  if (import.meta.env.VITE_CLAUDE_API_KEY) {
+    keys.push({ id: 'env-claude', name: 'Claude (System)', provider: 'claude',
+      key: import.meta.env.VITE_CLAUDE_API_KEY,
+      modelName: import.meta.env.VITE_CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
+      status: 'connected', isDefault: keys.length === 0, isEnabled: true });
+  }
+  if (import.meta.env.VITE_OPENROUTER_API_KEY) {
+    keys.push({ id: 'env-openrouter', name: 'OpenRouter (System)', provider: 'openrouter',
+      key: import.meta.env.VITE_OPENROUTER_API_KEY,
+      modelName: import.meta.env.VITE_OPENROUTER_MODEL || 'openai/gpt-4o',
+      status: 'connected', isDefault: keys.length === 0, isEnabled: true });
+  }
+  if (import.meta.env.VITE_MISTRAL_API_KEY) {
+    keys.push({ id: 'env-mistral', name: 'Mistral (System)', provider: 'mistral',
+      key: import.meta.env.VITE_MISTRAL_API_KEY,
+      modelName: import.meta.env.VITE_MISTRAL_MODEL || 'mistral-large-latest',
+      status: 'connected', isDefault: keys.length === 0, isEnabled: true });
+  }
+  return keys;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AIRequest {
@@ -433,7 +479,9 @@ export async function callAI(req: AIRequest, specificKey?: APIKey): Promise<AIRe
   // users are never blocked by a stale aiMode preference.
   if (isPremium) {
     const { systemApiKeys } = useAdminStore.getState();
-    const activeSystemKeys = systemApiKeys.filter(k => k.status === 'active').map(systemKeyToAPIKey);
+    const storeKeys = systemApiKeys.filter(k => k.status === 'active').map(systemKeyToAPIKey);
+    // Env keys are baked into the bundle at build time — available on all devices
+    const activeSystemKeys = storeKeys.length > 0 ? storeKeys : getEnvSystemKeys();
     const enabledPersonalKeys = apiKeys.filter(k => k.isEnabled);
 
     // If the user explicitly chose personal mode AND has personal keys, use those
@@ -479,7 +527,8 @@ export async function callAI(req: AIRequest, specificKey?: APIKey): Promise<AIRe
   // ── Guests (not logged in): system keys first, personal keys as fallback ──
   if (!isAuthenticated) {
     const { systemApiKeys } = useAdminStore.getState();
-    const activeSystemKeys = systemApiKeys.filter(k => k.status === 'active').map(systemKeyToAPIKey);
+    const storeKeys = systemApiKeys.filter(k => k.status === 'active').map(systemKeyToAPIKey);
+    const activeSystemKeys = storeKeys.length > 0 ? storeKeys : getEnvSystemKeys();
 
     if (activeSystemKeys.length > 0) {
       for (const key of activeSystemKeys) {

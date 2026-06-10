@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { useAdminStore } from '../../store/useAdminStore';
-import { testApiKey } from '../../services/aiService';
+import { testApiKey, getEnvSystemKeys } from '../../services/aiService';
 import { generateId } from '../../utils/cn';
 import { Key, Eye, EyeOff, CheckCircle, Loader2, ChevronDown, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -87,7 +87,7 @@ export const InlineApiKeySetup: React.FC = () => {
 
   const isPremium = isAuthenticated && (user?.plan === 'pro' || user?.plan === 'enterprise');
   const hasPersonalKey = apiKeys.some(k => k.isEnabled);
-  const hasSystemKeys = systemApiKeys.some(k => k.status === 'active');
+  const hasSystemKeys = systemApiKeys.some(k => k.status === 'active') || getEnvSystemKeys().length > 0;
 
   // Hide when: premium (use system keys automatically), already has a personal key,
   // dismissed, or guest with system keys available (they can work fine without adding a key)
