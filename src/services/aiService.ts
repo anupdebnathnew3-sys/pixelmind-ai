@@ -62,7 +62,7 @@ export function getEnvSystemKeys(): APIKey[] {
   if (import.meta.env.VITE_MISTRAL_API_KEY) {
     keys.push({ id: 'env-mistral', name: 'Mistral (System)', provider: 'mistral',
       key: import.meta.env.VITE_MISTRAL_API_KEY,
-      modelName: import.meta.env.VITE_MISTRAL_MODEL || 'mistral-large-latest',
+      modelName: import.meta.env.VITE_MISTRAL_MODEL || 'pixtral-12b-2409',
       status: 'connected', isDefault: keys.length === 0, isEnabled: true });
   }
   return keys;
