@@ -1,0 +1,815 @@
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { useStore } from '../../store/useStore';
+import { useGuestStore } from '../../store/useGuestStore';
+import { usePromptStore, buildImageToPromptPrompt } from '../../store/usePromptStore';
+import { callAI, imageToBase64ForAI } from '../../services/aiService';
+import {
+  Upload, Copy, RefreshCw, Zap, X, AlertCircle, Trash2,
+  Image as ImageIcon, ZoomIn, Clipboard, ChevronDown, ChevronUp,
+  Plus, RotateCcw, Check, Wand2
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
+
+// ─── Prompt Styles ─────────────────────────────────────────────────────────────
+
+const PROMPT_STYLES = [
+  {
+    id: 'simple',
+    label: 'Simple',
+    icon: '✦',
+    desc: 'Short & clean',
+    color: '#10B981',
+    instruction: 'Generate a SHORT, CLEAN prompt of 1-2 sentences MAXIMUM. Focus ONLY on the main subject. Keep it minimal and direct. No technical photography terms. No platform syntax unless specified.',
+  },
+  {
+    id: 'detailed',
+    label: 'Detailed',
+    icon: '◈',
+    desc: 'Rich & descriptive',
+    color: '#6366F1',
+    instruction: 'Generate a DETAILED descriptive prompt. Include: subject details, lighting conditions, color palette, composition, environment, textures, mood. Write 3-5 rich descriptive sentences.',
+  },
+  {
+    id: 'creative',
+    label: 'Creative',
+    icon: '✦',
+    desc: 'Artistic & imaginative',
+    color: '#8B5CF6',
+    instruction: 'Generate a CREATIVE, ARTISTIC prompt. Use imaginative and evocative language. Include storytelling elements, unique visual metaphors, cinematic atmosphere, and artistic style references. Make it visually striking and unconventional.',
+  },
+  {
+    id: 'commercial',
+    label: 'Commercial',
+    icon: '◉',
+    desc: 'Stock-optimized',
+    color: '#F59E0B',
+    instruction: 'Generate a COMMERCIAL STOCK PHOTOGRAPHY prompt. Focus on professional composition, commercial appeal, marketable subject framing, clean execution, and stock-ready aesthetics. Include lighting quality and professional photography terms suitable for stock marketplaces.',
+  },
+  {
+    id: 'ultra',
+    label: 'Ultra Detail',
+    icon: '⬡',
+    desc: 'Maximum detail',
+    color: '#EF4444',
+    instruction: 'Generate an ULTRA-DETAILED technical photography prompt. Include: camera angle and position, lens focal length and characteristics, aperture and depth of field, precise lighting setup (type, direction, quality, color temperature), shadow detail, texture specifics, background depth, composition technique, time of day, atmospheric conditions, post-processing style, and overall photographic mood. Use professional photography and cinematography terminology throughout.',
+  },
+];
+
+// ─── Platforms ─────────────────────────────────────────────────────────────────
+
+const PLATFORMS = [
+  { id: 'none',       label: 'None',             icon: '🚫', desc: 'No specific platform',   hint: 'General image description without platform-specific formatting' },
+  { id: 'midjourney', label: 'Midjourney',        icon: '🎨', desc: 'Discord bot',             hint: '/imagine prompt: with --ar --v 6 flags' },
+  { id: 'flux',       label: 'Flux',              icon: '⚡', desc: 'High quality diffusion',  hint: 'Natural language with style, lighting & mood' },
+  { id: 'ideogram',   label: 'Ideogram',          icon: '💡', desc: 'Text + image AI',         hint: 'Optimized for text-in-image workflows' },
+  { id: 'dalle',      label: 'DALL·E 3',          icon: '🤖', desc: 'OpenAI',                  hint: 'Descriptive natural language for DALL·E 3' },
+  { id: 'firefly',    label: 'Firefly',           icon: '🔥', desc: 'Adobe Creative',          hint: 'Adobe Stock photography style' },
+  { id: 'sd',         label: 'Stable Diffusion',  icon: '🌀', desc: 'Open source',             hint: 'Tag-based with quality modifiers' },
+];
+
+const ASPECT_RATIOS = ['None', '1:1', '4:5', '3:2', '16:9', '9:16', 'Random'];
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+interface UploadedImage {
+  id: string;
+  url: string;
+  file: File;
+  status: 'pending' | 'generating' | 'done' | 'error';
+  prompt?: string;
+  usedPlatform?: string;
+  usedRatio?: string;
+  usedStyle?: string;
+  errorMsg?: string;
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────────
+
+interface ImageToPromptPageProps {
+  guestAllowed?: boolean;
+}
+
+export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllowed = false }) => {
+  const { deductCredits, isAuthenticated } = useStore();
+  const { getTemplate } = usePromptStore();
+  const { deductGuestCredit, incrementGenerations, guestCredits } = useGuestStore();
+  const guestGenCount = useRef(0);
+
+  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState('none');
+  const [aspectRatio, setAspectRatio] = useState('None');
+  const [promptStyle, setPromptStyle] = useState('detailed');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [platformDropdownOpen, setPlatformDropdownOpen] = useState(false);
+
+  const platformDropdownRef = useRef<HTMLDivElement>(null);
+
+  // ── Close dropdown on outside click ───────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (platformDropdownRef.current && !platformDropdownRef.current.contains(e.target as Node)) {
+        setPlatformDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // ── Clipboard paste ────────────────────────────────────────────────────────
+  const addFiles = useCallback((files: File[]) => {
+    const newImgs: UploadedImage[] = files
+      .filter(f => f.type.startsWith('image/'))
+      .map(f => ({
+        id: Math.random().toString(36).substr(2, 9),
+        url: URL.createObjectURL(f),
+        file: f,
+        status: 'pending',
+      }));
+    if (newImgs.length > 0) {
+      setImages(prev => [...prev, ...newImgs]);
+      toast.success(`${newImgs.length} image${newImgs.length !== 1 ? 's' : ''} added`);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles: File[] = [];
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = file.type.split('/')[1] || 'png';
+            const named = new File([file], `pasted-image-${Date.now()}.${ext}`, { type: file.type });
+            imageFiles.push(named);
+          }
+        }
+      }
+      if (imageFiles.length > 0) addFiles(imageFiles);
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [addFiles]);
+
+  // ── Dropzone ───────────────────────────────────────────────────────────────
+  const onDrop = useCallback((files: File[]) => addFiles(files), [addFiles]);
+
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    onDrop,
+    accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
+    multiple: true,
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const getEffectiveRatio = (ratio: string) => {
+    if (ratio === 'None') return '';
+    if (ratio === 'Random') return ['1:1', '4:5', '16:9', '3:2'][Math.floor(Math.random() * 4)];
+    return ratio;
+  };
+
+  const getEffectivePlatform = (platform: string) =>
+    platform === 'none' ? 'general' : platform;
+
+  const getStyleInstruction = (styleId: string) =>
+    PROMPT_STYLES.find(s => s.id === styleId)?.instruction ?? '';
+
+  const replaceImage = (imgId: string) => {
+    setImages(prev => prev.filter(i => i.id !== imgId));
+    open();
+  };
+
+  // ── Generate all ───────────────────────────────────────────────────────────
+  const generateAll = async () => {
+    const pending = images.filter(i => i.status === 'pending');
+    if (pending.length === 0) { toast.error('No images to process'); return; }
+
+    // Guest credit gate
+    if (!isAuthenticated && guestCredits <= 0) {
+      toast.error('No guest credits remaining. Create a free account for 500 credits.');
+      return;
+    }
+
+    const template = getTemplate('image-to-prompt');
+    if (!template) { toast.error('Prompt template not found'); return; }
+
+    const effectiveRatio = getEffectiveRatio(aspectRatio);
+    const effectivePlatform = getEffectivePlatform(selectedPlatform);
+    const styleInstruction = getStyleInstruction(promptStyle);
+    setIsGenerating(true);
+
+    setImages(prev =>
+      prev.map(img => pending.some(p => p.id === img.id)
+        ? { ...img, status: 'generating', prompt: undefined, errorMsg: undefined }
+        : img
+      )
+    );
+
+    const noRatioNote = !effectiveRatio ? '\nDo NOT include any aspect ratio or resolution parameters in the output.' : '';
+    const systemSuffix = `\n\n${styleInstruction}\n\nReturn ONLY the prompt text — no markdown, no labels, no preamble.${noRatioNote}`;
+
+    let success = 0, fail = 0;
+    const CONCURRENCY = 3;
+
+    for (let i = 0; i < pending.length; i += CONCURRENCY) {
+      const chunk = pending.slice(i, i + CONCURRENCY);
+      const settled = await Promise.allSettled(
+        chunk.map(async img => {
+          const builtPrompt = buildImageToPromptPrompt(template, {
+            platform: effectivePlatform,
+            aspectRatio: effectiveRatio,
+          });
+          const { base64, mimeType } = await imageToBase64ForAI(img.file);
+          return callAI({
+            prompt: builtPrompt,
+            systemPrompt: template.systemPrompt + systemSuffix,
+            imageBase64: base64,
+            imageMimeType: mimeType,
+            maxTokens: promptStyle === 'ultra' ? 1200 : promptStyle === 'simple' ? 400 : 800,
+          });
+        })
+      );
+
+      settled.forEach((result, idx) => {
+        const img = chunk[idx];
+        if (result.status === 'fulfilled') {
+          setImages(prev => prev.map(i => i.id === img.id
+            ? { ...i, status: 'done', prompt: result.value.text.trim(), usedPlatform: selectedPlatform, usedRatio: effectiveRatio, usedStyle: promptStyle }
+            : i
+          ));
+          if (isAuthenticated) {
+            deductCredits(1);
+          } else {
+            deductGuestCredit(); incrementGenerations();
+            guestGenCount.current += 1;
+            if (guestGenCount.current % 3 === 0) {
+              toast('Sign in to save your prompts and get 500 free credits →', { icon: '👋', duration: 4000 });
+            }
+          }
+          success++;
+        } else {
+          const msg = result.reason instanceof Error ? result.reason.message : 'Generation failed';
+          setImages(prev => prev.map(i => i.id === img.id ? { ...i, status: 'error', errorMsg: msg } : i));
+          fail++;
+        }
+      });
+    }
+
+    setIsGenerating(false);
+    if (success > 0) toast.success(`Generated ${success} prompt${success !== 1 ? 's' : ''}!`);
+    if (fail > 0) toast.error(`${fail} failed — check AI Settings for a vision-capable model.`);
+  };
+
+  // ── Regenerate one ─────────────────────────────────────────────────────────
+  const regenerateOne = async (imgId: string) => {
+    if (!isAuthenticated && guestCredits <= 0) {
+      toast.error('No guest credits remaining. Create a free account for 500 credits.');
+      return;
+    }
+    const img = images.find(i => i.id === imgId);
+    if (!img) return;
+    const template = getTemplate('image-to-prompt');
+    if (!template) return;
+
+    const effectiveRatio = getEffectiveRatio(aspectRatio);
+    const effectivePlatform = getEffectivePlatform(selectedPlatform);
+    const styleInstruction = getStyleInstruction(promptStyle);
+
+    setImages(prev => prev.map(i => i.id === imgId ? { ...i, status: 'generating', prompt: undefined, errorMsg: undefined } : i));
+
+    const noRatioNote = !effectiveRatio ? '\nDo NOT include any aspect ratio or resolution parameters in the output.' : '';
+
+    try {
+      const builtPrompt = buildImageToPromptPrompt(template, { platform: effectivePlatform, aspectRatio: effectiveRatio });
+      const { base64, mimeType } = await imageToBase64ForAI(img.file);
+      const response = await callAI({
+        prompt: builtPrompt,
+        systemPrompt: template.systemPrompt + `\n\n${styleInstruction}\n\nReturn ONLY the prompt text — no markdown, no labels, no preamble.${noRatioNote}`,
+        imageBase64: base64,
+        imageMimeType: mimeType,
+        maxTokens: promptStyle === 'ultra' ? 1200 : promptStyle === 'simple' ? 400 : 800,
+      });
+      setImages(prev => prev.map(i => i.id === imgId
+        ? { ...i, status: 'done', prompt: response.text.trim(), usedPlatform: selectedPlatform, usedRatio: effectiveRatio, usedStyle: promptStyle }
+        : i
+      ));
+      if (isAuthenticated) {
+        deductCredits(1);
+      } else {
+        deductGuestCredit(); incrementGenerations();
+        guestGenCount.current += 1;
+        if (guestGenCount.current % 3 === 0) {
+          toast('Sign in to save your prompts and get 500 free credits →', { icon: '👋', duration: 4000 });
+        }
+      }
+      toast.success('Regenerated!');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Regeneration failed';
+      setImages(prev => prev.map(i => i.id === imgId ? { ...i, status: 'error', errorMsg: msg } : i));
+      toast.error(msg);
+    }
+  };
+
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const currentPlatform = PLATFORMS.find(p => p.id === selectedPlatform);
+  const currentStyle = PROMPT_STYLES.find(s => s.id === promptStyle);
+  const pendingImages = images.filter(i => i.status === 'pending');
+  const processedImages = images.filter(i => i.status !== 'pending');
+  const doneCount = images.filter(i => i.status === 'done').length;
+  const totalCount = images.length;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  return (
+    <DashboardLayout guestAllowed={guestAllowed}>
+
+      {/* ── Lightbox ── */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+            <X size={18} />
+          </button>
+          <img
+            src={lightboxSrc}
+            alt="Preview"
+            className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+          <p className="absolute bottom-4 text-white/40 text-xs">Click anywhere to close</p>
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-6 min-h-full">
+
+        {/* ════════════════════════════════════════════════════
+            LEFT SIDEBAR
+            ════════════════════════════════════════════════════ */}
+        <div className="lg:w-72 flex-shrink-0 space-y-4">
+          <InlineApiKeySetup />
+
+          <Card padding="none">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-[#0d1030]/50 rounded-t-2xl transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Zap size={16} className="text-[#6366F1]" />
+                <span className="font-semibold text-gray-900 dark:text-white text-sm">Generation Settings</span>
+              </div>
+              {sidebarOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+            </button>
+
+            {sidebarOpen && (
+              <div className="px-4 pb-4 space-y-5 border-t border-gray-100 dark:border-[#232650] pt-4">
+
+                {/* ── Prompt Style ─────────────────────────────── */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <Wand2 size={11} /> Prompt Style
+                  </p>
+                  <div className="space-y-1.5">
+                    {PROMPT_STYLES.map(style => (
+                      <button
+                        key={style.id}
+                        onClick={() => setPromptStyle(style.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl border-2 transition-all text-left ${
+                          promptStyle === style.id
+                            ? 'border-2 text-white shadow-sm'
+                            : 'border-gray-200 dark:border-[#232650] hover:border-gray-300 dark:hover:border-[#2f3260] bg-white dark:bg-[#191c40]'
+                        }`}
+                        style={promptStyle === style.id ? { borderColor: style.color, backgroundColor: style.color } : {}}
+                      >
+                        <span className="text-sm font-bold w-5 text-center flex-shrink-0">{style.icon}</span>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-bold leading-tight ${promptStyle === style.id ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                            {style.label}
+                          </p>
+                          <p className={`text-[10px] leading-tight ${promptStyle === style.id ? 'text-white/75' : 'text-gray-400'}`}>
+                            {style.desc}
+                          </p>
+                        </div>
+                        {promptStyle === style.id && <Check size={12} className="text-white ml-auto flex-shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-gray-100 dark:bg-[#232650]" />
+
+                {/* ── AI Platform ──────────────────────────────── */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5">
+                    AI Platform
+                  </p>
+
+                  <div className="relative" ref={platformDropdownRef}>
+                    <button
+                      onClick={() => setPlatformDropdownOpen(!platformDropdownOpen)}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-all ${
+                        selectedPlatform !== 'none'
+                          ? 'border-[#6366F1] bg-[#6366F1] shadow-sm'
+                          : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 bg-white dark:bg-[#191c40]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base flex-shrink-0 w-6 text-center">{currentPlatform?.icon}</span>
+                        <div className="text-left">
+                          <p className={`text-xs font-bold leading-tight ${selectedPlatform !== 'none' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                            Platform
+                          </p>
+                          <p className={`text-[10px] leading-tight ${selectedPlatform !== 'none' ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {currentPlatform?.label}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform flex-shrink-0 ${platformDropdownOpen ? 'rotate-180' : ''} ${selectedPlatform !== 'none' ? 'text-white/70' : 'text-gray-400'}`}
+                      />
+                    </button>
+
+                    {platformDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-xl overflow-hidden">
+                        <div className="py-1.5">
+                          {PLATFORMS.map((p, idx) => (
+                            <React.Fragment key={p.id}>
+                              {idx === 1 && <div className="h-px bg-gray-100 dark:bg-[#232650] mx-3 my-1" />}
+                              <button
+                                onClick={() => { setSelectedPlatform(p.id); setPlatformDropdownOpen(false); }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                                  selectedPlatform === p.id
+                                    ? 'bg-[#EEF2FF] dark:bg-[#6366F1]/15'
+                                    : 'hover:bg-gray-50 dark:hover:bg-[#232650]/60'
+                                }`}
+                              >
+                                <span className="text-base w-6 text-center flex-shrink-0">{p.icon}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-xs font-bold leading-tight ${selectedPlatform === p.id ? 'text-[#6366F1] dark:text-[#A5B4FC]' : 'text-gray-900 dark:text-white'}`}>
+                                    {p.label}
+                                  </p>
+                                  <p className="text-[10px] text-gray-400 leading-tight">{p.desc}</p>
+                                </div>
+                                {selectedPlatform === p.id && (
+                                  <span className="w-5 h-5 rounded-full bg-[#6366F1] flex items-center justify-center flex-shrink-0">
+                                    <Check size={10} className="text-white" />
+                                  </span>
+                                )}
+                              </button>
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {currentPlatform && selectedPlatform !== 'none' && (
+                    <div className="mt-2.5 flex items-start gap-2 text-[10px] bg-[#EEF2FF] dark:bg-[#6366F1]/10 px-3 py-2 rounded-lg border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
+                      <span className="flex-shrink-0 mt-0.5">{currentPlatform.icon}</span>
+                      <span className="text-gray-600 dark:text-gray-400 leading-relaxed">{currentPlatform.hint}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Aspect Ratio ─────────────────────────────── */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5">
+                    Aspect Ratio
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ASPECT_RATIOS.map(r => (
+                      <button
+                        key={r}
+                        onClick={() => setAspectRatio(r)}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors ${
+                          aspectRatio === r
+                            ? 'bg-[#6366F1] text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-[#0d1030] text-gray-600 dark:text-gray-400 hover:bg-[#EEF2FF] hover:text-[#6366F1] dark:hover:bg-[#6366F1]/10 dark:hover:text-[#A5B4FC] border border-gray-200 dark:border-[#232650]'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  {aspectRatio === 'None' && (
+                    <p className="text-[10px] text-gray-400 mt-1.5">No ratio in generated prompts</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* ── Stats ───────────────────────────────────────────── */}
+          {totalCount > 0 && (
+            <Card padding="sm">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Progress</p>
+              <div className="space-y-2">
+                {[
+                  { label: 'Total',     value: totalCount,                                       color: 'text-gray-900 dark:text-white' },
+                  { label: 'Generated', value: doneCount,                                        color: 'text-green-600' },
+                  { label: 'Pending',   value: pendingImages.length,                             color: 'text-amber-500' },
+                  { label: 'Errors',    value: images.filter(i => i.status === 'error').length,  color: 'text-red-500' },
+                ].map(row => (
+                  <div key={row.label} className="flex justify-between text-xs">
+                    <span className="text-gray-500">{row.label}</span>
+                    <span className={`font-bold ${row.color}`}>{row.value}</span>
+                  </div>
+                ))}
+                <div className="h-1.5 bg-gray-100 dark:bg-[#0d1030] rounded-full mt-2">
+                  <div
+                    className="h-full bg-[#6366F1] rounded-full transition-all duration-500"
+                    style={{ width: totalCount > 0 ? `${(doneCount / totalCount) * 100}%` : '0%' }}
+                  />
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* ════════════════════════════════════════════════════
+            MAIN CONTENT
+            ════════════════════════════════════════════════════ */}
+        <div className="flex-1 space-y-4 min-w-0">
+
+          {/* ── Header ──────────────────────────────────────────── */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Image to Prompt Generator</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                Upload images → Get{' '}
+                <strong className="text-[#6366F1]">{selectedPlatform === 'none' ? 'general' : currentPlatform?.label}</strong>
+                {' '}prompts in{' '}
+                <span style={{ color: currentStyle?.color }} className="font-semibold">{currentStyle?.label}</span>
+                {' '}style
+              </p>
+            </div>
+            {totalCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Trash2 size={14} />}
+                onClick={() => setImages([])}
+                className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
+
+          {/* ── Upload Zone ─────────────────────────────────────── */}
+          {images.length === 0 ? (
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
+                isDragActive
+                  ? 'border-[#6366F1] bg-[#EEF2FF] dark:bg-[#6366F1]/10 scale-[1.01]'
+                  : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1] hover:bg-[#EEF2FF]/40 dark:hover:bg-[#6366F1]/5'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <div className="flex flex-col items-center gap-3">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${isDragActive ? 'bg-[#6366F1]' : 'bg-[#EEF2FF] dark:bg-[#6366F1]/20'}`}>
+                  <Upload size={26} className={isDragActive ? 'text-white' : 'text-[#6366F1]'} />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {isDragActive ? 'Drop images here!' : 'Drop images or click to upload'}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    JPG, PNG, WEBP — multiple images supported
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button size="sm" variant="secondary">Browse Files</Button>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    <Clipboard size={13} />
+                    <span>or <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-[#232650] rounded text-[10px] font-mono border border-gray-200 dark:border-[#2f3260]">Ctrl+V</kbd> to paste</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Compact bar */
+            <div className="bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+              <input {...getInputProps()} />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center flex-shrink-0">
+                  <ImageIcon size={16} className="text-[#6366F1]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                    {totalCount} image{totalCount !== 1 ? 's' : ''} loaded
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">
+                    {pendingImages.length > 0
+                      ? `${pendingImages.length} ready · ${currentStyle?.label} style`
+                      : `${doneCount} prompt${doneCount !== 1 ? 's' : ''} generated`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {pendingImages.length > 0 && (
+                  <Button size="sm" loading={isGenerating} icon={<Zap size={13} />} onClick={generateAll}>
+                    {isGenerating ? 'Generating…' : `Generate ${pendingImages.length > 1 ? 'All' : 'Prompt'}`}
+                  </Button>
+                )}
+                <button
+                  onClick={open}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#6366F1] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#6366F1]/15 rounded-lg hover:bg-[#6366F1] hover:text-white dark:hover:bg-[#6366F1] dark:hover:text-white transition-colors border border-[#A5B4FC]/40 dark:border-[#6366F1]/25"
+                >
+                  <Plus size={12} /> Add More
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Pending thumbnail grid ───────────────────────────── */}
+          {pendingImages.length > 0 && (
+            <div className="bg-white dark:bg-[#191c40] border border-gray-100 dark:border-[#232650] rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
+                    <ImageIcon size={12} className="text-white" />
+                  </div>
+                  <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                    {pendingImages.length} file{pendingImages.length !== 1 ? 's' : ''} queued
+                  </span>
+                  <span className="text-xs text-gray-400">ready to generate</span>
+                </div>
+                <button
+                  onClick={() => setImages(prev => prev.filter(i => i.status !== 'pending'))}
+                  className="text-xs text-red-400 hover:text-red-600 transition-colors font-medium"
+                >
+                  Clear pending
+                </button>
+              </div>
+              <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1.5">
+                {pendingImages.map(img => (
+                  <div key={img.id} className="group relative">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-[#0d1030] border border-gray-200 dark:border-[#232650] group-hover:border-[#A5B4FC] transition-colors">
+                      <img src={img.url} alt={img.file.name} className="w-full h-full object-cover" />
+                    </div>
+                    <button
+                      onClick={() => setImages(prev => prev.filter(i => i.id !== img.id))}
+                      title="Remove"
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
+                    >
+                      <X size={8} />
+                    </button>
+                    <button
+                      onClick={() => replaceImage(img.id)}
+                      title="Replace"
+                      className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-blue-600"
+                    >
+                      <RotateCcw size={7} />
+                    </button>
+                    <p className="text-[7px] text-gray-400 truncate mt-0.5 text-center leading-tight" title={img.file.name}>
+                      {img.file.name.slice(0, 7)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Result cards ────────────────────────────────────── */}
+          {processedImages.length > 0 && (
+            <div className="space-y-4">
+              {processedImages.map(img => {
+                const isGen  = img.status === 'generating';
+                const isDone = img.status === 'done';
+                const isError = img.status === 'error';
+                const platform = PLATFORMS.find(p => p.id === (img.usedPlatform ?? selectedPlatform));
+                const style = PROMPT_STYLES.find(s => s.id === (img.usedStyle ?? promptStyle));
+
+                return (
+                  <div key={img.id} className="bg-white dark:bg-[#191c40] border border-gray-100 dark:border-[#232650] rounded-2xl overflow-hidden shadow-sm">
+                    <div className="flex flex-col md:flex-row">
+
+                      {/* ── Left: image preview ── */}
+                      <div className="relative md:w-[40%] flex-shrink-0 bg-gray-100 dark:bg-[#0d1030] min-h-[240px] md:min-h-[300px] group">
+                        <img src={img.url} alt={img.file.name} className="absolute inset-0 w-full h-full object-contain p-3" />
+
+                        <div
+                          className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center cursor-zoom-in"
+                          onClick={() => setLightboxSrc(img.url)}
+                        >
+                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/95 dark:bg-[#191c40]/95 rounded-xl px-4 py-2 flex items-center gap-2 shadow-lg border border-white/20">
+                            <ZoomIn size={14} className="text-[#6366F1]" />
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Click to expand</span>
+                          </div>
+                        </div>
+
+                        <div className="absolute top-3 left-3">
+                          {isGen && (
+                            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full shadow-sm">
+                              <span className="w-2.5 h-2.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                              Generating…
+                            </span>
+                          )}
+                          {isDone && <span className="text-[10px] font-semibold text-green-700 bg-green-100 border border-green-300 px-2.5 py-1 rounded-full shadow-sm">✓ Done</span>}
+                          {isError && <span className="text-[10px] font-semibold text-red-600 bg-red-100 border border-red-300 px-2.5 py-1 rounded-full shadow-sm">✗ Error</span>}
+                        </div>
+
+                        <div className="absolute top-3 right-3 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setImages(prev => prev.filter(i => i.id !== img.id))} title="Remove"
+                            className="w-7 h-7 rounded-full bg-white/90 dark:bg-[#232650] hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors shadow-sm">
+                            <X size={12} />
+                          </button>
+                          <button onClick={() => replaceImage(img.id)} title="Replace"
+                            className="w-7 h-7 rounded-full bg-white/90 dark:bg-[#232650] hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors shadow-sm">
+                            <RotateCcw size={11} />
+                          </button>
+                        </div>
+
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <div className="bg-black/55 backdrop-blur-sm rounded-lg px-2.5 py-1.5">
+                            <p className="text-[10px] text-white/90 font-medium truncate">{img.file.name}</p>
+                            <p className="text-[9px] text-white/55">{(img.file.size / 1024).toFixed(0)} KB</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ── Right: prompt content ── */}
+                      <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EEF2FF] dark:bg-[#6366F1]/15 text-[#6366F1] dark:text-[#A5B4FC] text-xs font-semibold border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
+                            {platform?.icon}&nbsp;{platform?.id === 'none' ? 'General' : platform?.label ?? 'General'}
+                          </span>
+                          {style && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border" style={{ color: style.color, backgroundColor: style.color + '15', borderColor: style.color + '40' }}>
+                              {style.icon} {style.label}
+                            </span>
+                          )}
+                          {img.usedRatio && (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-[#232650] text-gray-600 dark:text-gray-400 text-xs font-medium">
+                              {img.usedRatio}
+                            </span>
+                          )}
+                        </div>
+
+                        {isGen ? (
+                          <div className="space-y-2 animate-pulse flex-1">
+                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-full" />
+                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-5/6" />
+                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-4/5" />
+                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-3/4" />
+                          </div>
+                        ) : isError ? (
+                          <div className="flex items-start gap-2.5 p-3 bg-red-50 dark:bg-red-900/15 rounded-xl border border-red-200 dark:border-red-800/40 flex-1">
+                            <AlertCircle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-red-600 dark:text-red-400 leading-relaxed">{img.errorMsg}</p>
+                          </div>
+                        ) : isDone ? (
+                          <div className="flex-1 bg-gray-50 dark:bg-[#0d1030] rounded-xl p-4 border border-gray-100 dark:border-[#232650]">
+                            <p className="text-xs text-gray-700 dark:text-gray-300 font-mono leading-relaxed break-words">{img.prompt}</p>
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isDone && (
+                            <Button size="xs" variant="secondary" icon={<Copy size={11} />}
+                              onClick={() => { navigator.clipboard.writeText(img.prompt ?? ''); toast.success('Prompt copied!'); }}>
+                              Copy Prompt
+                            </Button>
+                          )}
+                          <Button size="xs" variant="ghost" icon={<RefreshCw size={11} />} onClick={() => regenerateOne(img.id)}>
+                            Regenerate
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Empty state ─────────────────────────────────────── */}
+          {images.length === 0 && (
+            <div className="text-center py-14">
+              <div className="w-16 h-16 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/15 flex items-center justify-center mx-auto mb-4">
+                <ImageIcon size={28} className="text-[#6366F1]" />
+              </div>
+              <p className="font-semibold text-gray-900 dark:text-white mb-1">No images yet</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                Drop images above, or press{' '}
+                <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-[#232650] rounded text-xs font-mono border border-gray-200 dark:border-[#2f3260]">Ctrl+V</kbd>{' '}
+                to paste from clipboard
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+};
