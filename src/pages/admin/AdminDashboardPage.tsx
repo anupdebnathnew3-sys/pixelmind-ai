@@ -6,7 +6,9 @@ import { Button } from '../../components/ui/Button';
 import { useAdminStore } from '../../store/useAdminStore';
 import {
   Users, CreditCard, Zap, BarChart3, TrendingUp, AlertTriangle,
-  CheckCircle, Settings, MessageSquare, FileText, ChevronRight
+  CheckCircle, Settings, MessageSquare, FileText, ChevronRight,
+  Palette, Shield, Scale, Bell, Navigation, Globe, Tag,
+  DollarSign, Wallet, Lock, Bot, User, Image
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -28,15 +30,105 @@ const revenueData = [
   { month: 'Dec', revenue: 18200, users: 1650 },
 ];
 
-const adminLinks = [
-  { label: 'User Management',   path: '/admin/users',         icon: <Users size={18} />,       color: '#6366F1' },
-  { label: 'Subscriptions',     path: '/admin/subscriptions', icon: <CreditCard size={18} />,  color: '#8B5CF6' },
-  { label: 'API Management',    path: '/admin/apis',          icon: <Zap size={18} />,         color: '#F59E0B' },
-  { label: 'Prompt Management', path: '/admin/prompts',       icon: <MessageSquare size={18} />, color: '#EF4444' },
-  { label: 'Credit Management', path: '/admin/credits',       icon: <BarChart3 size={18} />,   color: '#10B981' },
-  { label: 'Content Management',path: '/admin/content',       icon: <FileText size={18} />,    color: '#3B82F6' },
-  { label: 'Global Settings',   path: '/admin/settings',      icon: <Settings size={18} />,    color: '#6B7280' },
-  { label: 'Maintenance Mode',  path: '/admin/maintenance',   icon: <AlertTriangle size={18} />, color: '#F59E0B' },
+interface AdminPage {
+  label: string;
+  desc: string;
+  path: string;
+  icon: React.ReactNode;
+  badge?: string;
+}
+
+interface AdminSection {
+  title: string;
+  desc: string;
+  color: string;
+  bg: string;
+  border: string;
+  icon: React.ReactNode;
+  pages: AdminPage[];
+}
+
+const adminSections: AdminSection[] = [
+  {
+    title: 'Users & Access',
+    desc: 'Manage registered users, credits, and subscriptions',
+    color: '#6366F1',
+    bg: 'from-indigo-50 to-indigo-50 dark:from-indigo-900/15 dark:to-indigo-900/5',
+    border: 'border-indigo-100 dark:border-indigo-800/30',
+    icon: <Users size={18} />,
+    pages: [
+      { label: 'User Management',   desc: 'View, edit, suspend or delete users',          path: '/admin/users',         icon: <User size={15} /> },
+      { label: 'Credit Management', desc: 'Adjust and monitor user credit balances',       path: '/admin/credits',       icon: <Zap size={15} /> },
+      { label: 'Subscriptions',     desc: 'Browse and manage active subscriptions',        path: '/admin/subscriptions', icon: <CreditCard size={15} /> },
+    ],
+  },
+  {
+    title: 'Billing & Plans',
+    desc: 'Configure pricing, discounts, payment and feature gating',
+    color: '#8B5CF6',
+    bg: 'from-violet-50 to-violet-50 dark:from-violet-900/15 dark:to-violet-900/5',
+    border: 'border-violet-100 dark:border-violet-800/30',
+    icon: <CreditCard size={18} />,
+    pages: [
+      { label: 'Pricing Manager',  desc: 'Set and update plan prices',                   path: '/admin/pricing',          icon: <DollarSign size={15} /> },
+      { label: 'Discounts',        desc: 'Create promo codes and discount rules',         path: '/admin/discounts',        icon: <Tag size={15} /> },
+      { label: 'Billing Manager',  desc: 'Review billing history and invoices',           path: '/admin/billing-manager',  icon: <Wallet size={15} /> },
+      { label: 'Payment Gateway',  desc: 'Configure payment providers and keys',          path: '/admin/payment-gateway',  icon: <CreditCard size={15} /> },
+      { label: 'Feature Access',   desc: 'Control which plans unlock which features',     path: '/admin/feature-access',   icon: <Lock size={15} /> },
+    ],
+  },
+  {
+    title: 'AI & Platform',
+    desc: 'Manage API keys, models and AI prompt templates',
+    color: '#F59E0B',
+    bg: 'from-amber-50 to-amber-50 dark:from-amber-900/15 dark:to-amber-900/5',
+    border: 'border-amber-100 dark:border-amber-800/30',
+    icon: <Bot size={18} />,
+    pages: [
+      { label: 'API Management',    desc: 'Add and manage AI provider API keys',          path: '/admin/apis',    icon: <Zap size={15} /> },
+      { label: 'Prompt Management', desc: 'Edit and fine-tune AI prompt templates',       path: '/admin/prompts', icon: <MessageSquare size={15} /> },
+    ],
+  },
+  {
+    title: 'Design & Content',
+    desc: 'Control the visual theme, page text and site content',
+    color: '#EC4899',
+    bg: 'from-pink-50 to-pink-50 dark:from-pink-900/15 dark:to-pink-900/5',
+    border: 'border-pink-100 dark:border-pink-800/30',
+    icon: <Palette size={18} />,
+    pages: [
+      { label: 'CMS Editor',          desc: 'Edit all page text and copy site-wide',      path: '/admin/cms',         icon: <Globe size={15} />, badge: 'New' },
+      { label: 'Theme Manager',       desc: 'Customize brand colors and UI theme',         path: '/admin/theme',       icon: <Palette size={15} /> },
+      { label: 'Navigation Manager',  desc: 'Reorder and configure site navigation',       path: '/admin/navigation',  icon: <Navigation size={15} /> },
+      { label: 'Content Management',  desc: 'Manage blog posts and marketing content',     path: '/admin/content',     icon: <FileText size={15} /> },
+      { label: 'About Manager',       desc: 'Update your bio, photo and about page',       path: '/admin/about',       icon: <Image size={15} /> },
+    ],
+  },
+  {
+    title: 'Legal & Security',
+    desc: 'Manage policies, access rules and guest alerts',
+    color: '#EF4444',
+    bg: 'from-red-50 to-red-50 dark:from-red-900/15 dark:to-red-900/5',
+    border: 'border-red-100 dark:border-red-800/30',
+    icon: <Shield size={18} />,
+    pages: [
+      { label: 'Legal Manager',      desc: 'Update terms of service and privacy policy',  path: '/admin/legal',        icon: <Scale size={15} /> },
+      { label: 'Security Settings',  desc: 'Configure login rules and security options',  path: '/admin/security',     icon: <Shield size={15} /> },
+      { label: 'Guest Alert Manager',desc: 'Set alerts and banners for guest visitors',   path: '/admin/guest-alerts', icon: <Bell size={15} /> },
+    ],
+  },
+  {
+    title: 'System',
+    desc: 'Global settings and site maintenance controls',
+    color: '#64748B',
+    bg: 'from-slate-50 to-slate-50 dark:from-slate-800/20 dark:to-slate-800/10',
+    border: 'border-slate-100 dark:border-slate-700/30',
+    icon: <Settings size={18} />,
+    pages: [
+      { label: 'Global Settings',  desc: 'Site-wide configuration and preferences',      path: '/admin/settings',    icon: <Settings size={15} /> },
+      { label: 'Maintenance Mode', desc: 'Take the site offline for maintenance',         path: '/admin/maintenance', icon: <AlertTriangle size={15} /> },
+    ],
+  },
 ];
 
 export const AdminDashboardPage: React.FC = () => {
@@ -65,7 +157,8 @@ export const AdminDashboardPage: React.FC = () => {
 
   return (
     <DashboardLayout requireAdmin>
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -87,17 +180,16 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* ── Stats ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Total Users"     value={totalUsers.toLocaleString()}    change="All registered users"   changeType="increase" icon={<Users size={20} />}      color="#6366F1" />
-        <StatCard title="Active Subs"     value={activeSubs.toLocaleString()}    change="Paying subscribers"     changeType="increase" icon={<CreditCard size={20} />} color="#8B5CF6" />
-        <StatCard title="Monthly Revenue" value={`$${monthlyRevenue}`}           change="From active plans"      changeType="increase" icon={<TrendingUp size={20} />} color="#F59E0B" />
+        <StatCard title="Total Users"     value={totalUsers.toLocaleString()}     change="All registered users"  changeType="increase" icon={<Users size={20} />}      color="#6366F1" />
+        <StatCard title="Active Subs"     value={activeSubs.toLocaleString()}     change="Paying subscribers"    changeType="increase" icon={<CreditCard size={20} />} color="#8B5CF6" />
+        <StatCard title="Monthly Revenue" value={`$${monthlyRevenue}`}            change="From active plans"     changeType="increase" icon={<TrendingUp size={20} />} color="#F59E0B" />
         <StatCard title="Suspended"       value={suspendedUsers.toLocaleString()} change="Suspended accounts"   changeType={suspendedUsers > 0 ? 'decrease' : 'neutral'} icon={<Zap size={20} />} color="#EF4444" />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        {/* Revenue Chart */}
+      {/* ── Charts ── */}
+      <div className="grid lg:grid-cols-3 gap-6 mb-10">
         <div className="lg:col-span-2">
           <Card>
             <div className="flex items-center justify-between mb-6">
@@ -130,7 +222,6 @@ export const AdminDashboardPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Plan Distribution */}
         <Card>
           <h2 className="font-bold text-gray-900 dark:text-white mb-6">Plan Distribution</h2>
           <ResponsiveContainer width="100%" height={200}>
@@ -158,25 +249,105 @@ export const AdminDashboardPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Quick Admin Links */}
-      <div className="mb-8">
-        <h2 className="font-bold text-gray-900 dark:text-white mb-4">Admin Controls</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {adminLinks.map(link => (
-            <Link key={link.path} to={link.path}>
-              <div className="group flex items-center gap-3 p-4 bg-white dark:bg-[#191c40] rounded-2xl border border-gray-100 dark:border-[#232650] hover:border-[#A5B4FC] dark:hover:border-[#6366F1] transition-all hover:shadow-md">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white flex-shrink-0" style={{ background: link.color }}>
-                  {link.icon}
+      {/* ── Admin Control Sections ── */}
+      <div className="mb-10">
+        <div className="mb-6">
+          <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Admin Controls</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Select any section below to manage and configure it</p>
+        </div>
+
+        <div className="space-y-6">
+          {adminSections.map(section => (
+            <div
+              key={section.title}
+              className={`rounded-2xl border bg-gradient-to-br ${section.bg} ${section.border} overflow-hidden`}
+            >
+              {/* Section header */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: 'inherit' }}>
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm"
+                  style={{ background: section.color }}
+                >
+                  {section.icon}
                 </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">{link.label}</span>
-                <ChevronRight size={14} className="text-gray-300 group-hover:text-[#6366F1] ml-auto" />
+                <div>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">{section.title}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{section.desc}</p>
+                </div>
+                <span
+                  className="ml-auto text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                  style={{ background: `${section.color}18`, color: section.color }}
+                >
+                  {section.pages.length} {section.pages.length === 1 ? 'page' : 'pages'}
+                </span>
               </div>
-            </Link>
+
+              {/* Page rows */}
+              <div className="divide-y divide-gray-100 dark:divide-white/5">
+                {section.pages.map((page, idx) => (
+                  <div
+                    key={page.path}
+                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors group"
+                  >
+                    {/* Step number */}
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={{ background: `${section.color}15`, color: section.color }}
+                    >
+                      {idx + 1}
+                    </div>
+
+                    {/* Icon */}
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${section.color}12`, color: section.color }}
+                    >
+                      {page.icon}
+                    </div>
+
+                    {/* Label + desc */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{page.label}</p>
+                        {page.badge && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#6366F1] text-white uppercase tracking-wide">
+                            {page.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{page.desc}</p>
+                    </div>
+
+                    {/* Edit button */}
+                    <Link
+                      to={page.path}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex-shrink-0 border"
+                      style={{
+                        color: section.color,
+                        borderColor: `${section.color}30`,
+                        background: `${section.color}08`,
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLAnchorElement).style.background = section.color;
+                        (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLAnchorElement).style.background = `${section.color}08`;
+                        (e.currentTarget as HTMLAnchorElement).style.color = section.color;
+                      }}
+                    >
+                      Edit
+                      <ChevronRight size={12} />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Recent Users */}
+      {/* ── Recent Users ── */}
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-gray-900 dark:text-white">Recent Users</h2>
@@ -230,6 +401,7 @@ export const AdminDashboardPage: React.FC = () => {
           </table>
         </div>
       </Card>
+
     </DashboardLayout>
   );
 };
