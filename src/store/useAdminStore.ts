@@ -505,6 +505,12 @@ interface AdminState {
   updateGuestAlertSettings: (patch: Partial<GuestAlertSettings>) => void;
   updateSecuritySettings: (patch: Partial<SecuritySettings>) => void;
   updateHeroAnimationSettings: (patch: Partial<HeroAnimationSettings>) => void;
+
+  // CMS content (flat key-value — all UI text across the site)
+  cmsContent: Record<string, string>;
+  updateCMSContent: (key: string, value: string) => void;
+  bulkUpdateCMSContent: (updates: Record<string, string>) => void;
+  resetCMSContent: () => void;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -535,6 +541,7 @@ export const useAdminStore = create<AdminState>()(
       announcements: DEFAULT_ANNOUNCEMENTS,
       featuredTools: DEFAULT_FEATURED_TOOLS,
       adminSubscriptions: DEFAULT_SUBSCRIPTIONS,
+      cmsContent: {},
 
       updateTool: (id, updates) =>
         set((s) => ({ tools: s.tools.map((t) => (t.id === id ? { ...t, ...updates } : t)) })),
@@ -633,10 +640,17 @@ export const useAdminStore = create<AdminState>()(
         set((s) => ({ securitySettings: { ...s.securitySettings, ...patch } })),
       updateHeroAnimationSettings: (patch) =>
         set((s) => ({ heroAnimationSettings: { ...s.heroAnimationSettings, ...patch } })),
+
+      updateCMSContent: (key, value) =>
+        set((s) => ({ cmsContent: { ...s.cmsContent, [key]: value } })),
+      bulkUpdateCMSContent: (updates) =>
+        set((s) => ({ cmsContent: { ...s.cmsContent, ...updates } })),
+      resetCMSContent: () =>
+        set({ cmsContent: {} }),
     }),
     {
       name: 'pixelmind-admin-storage',
-      version: 5,
+      version: 6,
       migrate: (old: any, fromVersion: number) => {
         if (fromVersion < 2 && old?.systemApiKeys) {
           old.systemApiKeys = (old.systemApiKeys as any[]).filter(
@@ -658,6 +672,9 @@ export const useAdminStore = create<AdminState>()(
           if (!old.homepageContent.heroMicroLabel) old.homepageContent.heroMicroLabel = DEFAULT_HOMEPAGE.heroMicroLabel;
           if (!old.homepageContent.heroTitleLine1) old.homepageContent.heroTitleLine1 = DEFAULT_HOMEPAGE.heroTitleLine1;
           if (!old.homepageContent.heroTitleLine2) old.homepageContent.heroTitleLine2 = DEFAULT_HOMEPAGE.heroTitleLine2;
+        }
+        if (fromVersion < 6) {
+          if (!old.cmsContent) old.cmsContent = {};
         }
         return old;
       },

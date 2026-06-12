@@ -62,6 +62,7 @@ const adminItems: NavItem[] = [
   {
     id: 'design-group', label: 'Design & Content', icon: <Palette size={18} />, path: '/admin/design-group',
     children: [
+      { id: 'cms-editor', label: 'CMS Editor', icon: <Globe size={16} />, path: '/admin/cms', badge: 'New' },
       { id: 'navigation-manager', label: 'Navigation Manager', icon: <Navigation size={16} />, path: '/admin/navigation' },
       { id: 'theme-manager', label: 'Theme Manager', icon: <Palette size={16} />, path: '/admin/theme' },
       { id: 'content-management', label: 'Content Management', icon: <FileText size={16} />, path: '/admin/content' },

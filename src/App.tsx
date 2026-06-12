@@ -49,6 +49,8 @@ import { ThemeManagerPage } from './pages/admin/ThemeManagerPage';
 import { LegalManagerPage } from './pages/admin/LegalManagerPage';
 import { SecuritySettingsPage } from './pages/admin/SecuritySettingsPage';
 import { GuestAlertManagerPage } from './pages/admin/GuestAlertManagerPage';
+import { CMSEditorPage } from './pages/admin/CMSEditorPage';
+import { ThemeProvider } from './components/providers/ThemeProvider';
 import { TermsPage } from './pages/public/TermsPage';
 import { PrivacyPage } from './pages/public/PrivacyPage';
 import { ProfilePage } from './pages/dashboard/ProfilePage';
@@ -93,19 +95,12 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { theme, user } = useStore();
-  const { uiSettings } = useAdminStore();
 
   useEffect(() => {
     const html = document.documentElement;
     html.classList.toggle('dark', theme === 'dark');
     html.setAttribute('data-theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--color-primary', uiSettings.primaryColor);
-    root.style.setProperty('--color-gradient-end', uiSettings.accentColor);
-  }, [uiSettings.primaryColor, uiSettings.accentColor]);
 
   // ── Real-time CMS sync via Firestore ──────────────────────────────────────
   useEffect(() => {
@@ -132,6 +127,7 @@ export default function App() {
 
   return (
     <>
+      <ThemeProvider />
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       <MaintenanceGuard>
       <Routes>
@@ -191,6 +187,7 @@ export default function App() {
         <Route path="/admin/legal" element={<LegalManagerPage />} />
         <Route path="/admin/security" element={<SecuritySettingsPage />} />
         <Route path="/admin/guest-alerts" element={<GuestAlertManagerPage />} />
+        <Route path="/admin/cms" element={<CMSEditorPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
