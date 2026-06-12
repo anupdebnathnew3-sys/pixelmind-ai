@@ -8,7 +8,7 @@ import { usePromptStore, buildImageToPromptPrompt } from '../../store/usePromptS
 import { callAI, imageToBase64ForAI } from '../../services/aiService';
 import {
   Upload, Copy, RefreshCw, Zap, X, AlertCircle, Trash2,
-  Image as ImageIcon, ZoomIn, Clipboard, ChevronDown, ChevronUp,
+  Image as ImageIcon, ZoomIn, Clipboard, ChevronDown,
   Plus, RotateCcw, Check, Wand2, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -105,7 +105,6 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
   const [promptStyle, setPromptStyle] = useState('detailed');
   const [isGenerating, setIsGenerating] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [platformDropdownOpen, setPlatformDropdownOpen] = useState(false);
 
   const platformDropdownRef = useRef<HTMLDivElement>(null);
@@ -367,202 +366,220 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
         {/* ════════════════════════════════════════════════════
             LEFT SIDEBAR
             ════════════════════════════════════════════════════ */}
-        <div className="lg:w-72 flex-shrink-0 space-y-4">
+        <div className="lg:w-72 flex-shrink-0 space-y-3">
           <InlineApiKeySetup />
 
-          {/* Active settings summary */}
-          <div className="flex items-center gap-3 px-3.5 py-3 bg-gradient-to-r from-[#6366F1]/8 to-[#8B5CF6]/8 dark:from-[#6366F1]/15 dark:to-[#8B5CF6]/15 rounded-2xl border border-[#6366F1]/20 dark:border-[#6366F1]/25">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center flex-shrink-0 shadow-md shadow-[#6366F1]/30">
-              <Wand2 size={14} className="text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Image to Prompt</p>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight mt-0.5">
-                <span style={{ color: currentStyle?.color }} className="font-semibold">{currentStyle?.label}</span>
-                {' · '}
-                {currentPlatform?.icon} {selectedPlatform === 'none' ? 'No Platform' : currentPlatform?.label}
-              </p>
-            </div>
-          </div>
-
-          {/* Generation Settings Card */}
+          {/* Generation Settings — always open, no toggle */}
           <div className="bg-white dark:bg-[#191c40] rounded-2xl border border-gray-200 dark:border-[#232650] overflow-hidden shadow-sm">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-[#0d1030]/40 transition-colors"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center">
-                  <Zap size={12} className="text-[#6366F1]" />
+
+            {/* Gradient header */}
+            <div className="relative px-4 py-4 bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] overflow-hidden">
+              <div className="absolute -right-5 -top-5 w-20 h-20 rounded-full bg-white/10" />
+              <div className="absolute right-3 bottom-1 w-10 h-10 rounded-full bg-white/[0.07]" />
+              <div className="relative flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Wand2 size={16} className="text-white" />
                 </div>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">Generation Settings</span>
-              </div>
-              {sidebarOpen
-                ? <ChevronUp size={15} className="text-gray-400" />
-                : <ChevronDown size={15} className="text-gray-400" />}
-            </button>
-
-            {sidebarOpen && (
-              <div className="border-t border-gray-100 dark:border-[#232650] px-4 pb-5 pt-4 space-y-5">
-
-                {/* ── Prompt Style ─────────────────────────────── */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <Wand2 size={10} /> Prompt Style
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-white leading-tight">Generation Settings</p>
+                  <p className="text-[10px] text-white/65 mt-0.5 truncate">
+                    <span className="text-white/90 font-semibold">{currentStyle?.label}</span>
+                    {' · '}
+                    {selectedPlatform === 'none' ? 'All Platforms' : currentPlatform?.label}
                   </p>
-                  <div className="space-y-1.5">
-                    {PROMPT_STYLES.map(style => (
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-5">
+
+              {/* ── Prompt Style — 2-column grid ─────────────── */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
+                  Prompt Style
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PROMPT_STYLES.map((style, idx) => {
+                    const isSelected = promptStyle === style.id;
+                    const isLastOdd  = idx === PROMPT_STYLES.length - 1 && PROMPT_STYLES.length % 2 !== 0;
+                    return isLastOdd ? (
+                      /* Full-width row for the last solo item */
                       <button
                         key={style.id}
                         onClick={() => setPromptStyle(style.id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-left group ${
-                          promptStyle === style.id
-                            ? 'shadow-sm'
-                            : 'border-gray-200 dark:border-[#232650] hover:border-gray-300 dark:hover:border-[#2f3260] bg-white dark:bg-[#191c40] hover:bg-gray-50 dark:hover:bg-[#0d1030]/50'
+                        className={`col-span-2 flex items-center gap-3 px-3.5 py-3 rounded-2xl border-2 transition-all text-left ${
+                          isSelected ? 'shadow-md' : 'border-gray-100 dark:border-[#232650] hover:border-gray-200 dark:hover:border-[#2f3260] bg-gray-50/50 dark:bg-[#0d1030]/40 hover:bg-gray-100/60 dark:hover:bg-[#0d1030]/60'
                         }`}
-                        style={
-                          promptStyle === style.id
-                            ? { borderColor: style.color, backgroundColor: style.color + '12' }
-                            : {}
-                        }
+                        style={isSelected ? { borderColor: style.color, backgroundColor: style.color + '14' } : {}}
                       >
                         <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold transition-all"
+                          className="w-9 h-9 rounded-xl flex items-center justify-center text-base font-bold flex-shrink-0 transition-all"
                           style={{
-                            backgroundColor: promptStyle === style.id ? style.color : style.color + '20',
-                            color: promptStyle === style.id ? 'white' : style.color,
+                            backgroundColor: isSelected ? style.color : style.color + '20',
+                            color: isSelected ? 'white' : style.color,
+                            boxShadow: isSelected ? `0 4px 10px ${style.color}40` : 'none',
                           }}
                         >
                           {style.icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p
-                            className="text-xs font-bold leading-tight"
-                            style={{ color: promptStyle === style.id ? style.color : undefined }}
-                          >
-                            {promptStyle !== style.id ? (
-                              <span className="text-gray-900 dark:text-white">{style.label}</span>
-                            ) : style.label}
+                          <p className={`text-xs font-bold leading-tight ${isSelected ? '' : 'text-gray-900 dark:text-white'}`}
+                            style={{ color: isSelected ? style.color : undefined }}>
+                            {style.label}
                           </p>
-                          <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{style.desc}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">{style.desc}</p>
                         </div>
-                        {promptStyle === style.id && (
-                          <div
-                            className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: style.color }}
-                          >
-                            <Check size={10} className="text-white" />
+                        {isSelected && (
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: style.color }}>
+                            <Check size={9} className="text-white" />
                           </div>
                         )}
                       </button>
-                    ))}
-                  </div>
+                    ) : (
+                      /* Normal compact card */
+                      <button
+                        key={style.id}
+                        onClick={() => setPromptStyle(style.id)}
+                        className={`relative flex flex-col items-center gap-2.5 p-3.5 rounded-2xl border-2 transition-all text-center ${
+                          isSelected ? 'shadow-md' : 'border-gray-100 dark:border-[#232650] hover:border-gray-200 dark:hover:border-[#2f3260] bg-gray-50/50 dark:bg-[#0d1030]/40 hover:bg-gray-100/60 dark:hover:bg-[#0d1030]/60'
+                        }`}
+                        style={isSelected ? { borderColor: style.color, backgroundColor: style.color + '14' } : {}}
+                      >
+                        <div
+                          className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold transition-all"
+                          style={{
+                            backgroundColor: isSelected ? style.color : style.color + '20',
+                            color: isSelected ? 'white' : style.color,
+                            boxShadow: isSelected ? `0 4px 12px ${style.color}40` : 'none',
+                          }}
+                        >
+                          {style.icon}
+                        </div>
+                        <div>
+                          <p className={`text-[11px] font-bold leading-tight ${isSelected ? '' : 'text-gray-900 dark:text-white'}`}
+                            style={{ color: isSelected ? style.color : undefined }}>
+                            {style.label}
+                          </p>
+                          <p className="text-[9px] text-gray-400 mt-0.5 leading-tight">{style.desc}</p>
+                        </div>
+                        {isSelected && (
+                          <div
+                            className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-[#191c40]"
+                            style={{ backgroundColor: style.color }}
+                          >
+                            <Check size={7} className="text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
 
-                <div className="h-px bg-gray-100 dark:bg-[#232650]" />
+              <div className="h-px bg-gray-100 dark:bg-[#232650]" />
 
-                {/* ── AI Platform ──────────────────────────────── */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
-                    AI Platform
-                  </p>
-                  <div className="relative" ref={platformDropdownRef}>
-                    <button
-                      onClick={() => setPlatformDropdownOpen(!platformDropdownOpen)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-all ${
-                        selectedPlatform !== 'none'
-                          ? 'border-[#6366F1] bg-[#6366F1] shadow-sm shadow-[#6366F1]/30'
-                          : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 bg-white dark:bg-[#191c40]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-base w-6 text-center flex-shrink-0">{currentPlatform?.icon}</span>
-                        <div className="text-left">
-                          <p className={`text-xs font-bold leading-tight ${selectedPlatform !== 'none' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                            {selectedPlatform === 'none' ? 'No Platform' : currentPlatform?.label}
-                          </p>
-                          <p className={`text-[10px] leading-tight ${selectedPlatform !== 'none' ? 'text-white/65' : 'text-gray-400'}`}>
-                            {currentPlatform?.desc}
-                          </p>
-                        </div>
+              {/* ── AI Platform ──────────────────────────────── */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
+                  AI Platform
+                </p>
+                <div className="relative" ref={platformDropdownRef}>
+                  <button
+                    onClick={() => setPlatformDropdownOpen(!platformDropdownOpen)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-all ${
+                      selectedPlatform !== 'none'
+                        ? 'border-[#6366F1] bg-[#6366F1] shadow-sm shadow-[#6366F1]/30'
+                        : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 bg-white dark:bg-[#191c40]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base w-6 text-center flex-shrink-0">{currentPlatform?.icon}</span>
+                      <div className="text-left">
+                        <p className={`text-xs font-bold leading-tight ${selectedPlatform !== 'none' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                          {selectedPlatform === 'none' ? 'No Platform' : currentPlatform?.label}
+                        </p>
+                        <p className={`text-[10px] leading-tight ${selectedPlatform !== 'none' ? 'text-white/65' : 'text-gray-400'}`}>
+                          {currentPlatform?.desc}
+                        </p>
                       </div>
-                      <ChevronDown
-                        size={14}
-                        className={`transition-transform flex-shrink-0 ${platformDropdownOpen ? 'rotate-180' : ''} ${selectedPlatform !== 'none' ? 'text-white/70' : 'text-gray-400'}`}
-                      />
-                    </button>
+                    </div>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform flex-shrink-0 ${platformDropdownOpen ? 'rotate-180' : ''} ${selectedPlatform !== 'none' ? 'text-white/70' : 'text-gray-400'}`}
+                    />
+                  </button>
 
-                    {platformDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden">
-                        <div className="py-1.5">
-                          {PLATFORMS.map((p, idx) => (
-                            <React.Fragment key={p.id}>
-                              {idx === 1 && <div className="h-px bg-gray-100 dark:bg-[#232650] mx-3 my-1" />}
-                              <button
-                                onClick={() => { setSelectedPlatform(p.id); setPlatformDropdownOpen(false); }}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                                  selectedPlatform === p.id
-                                    ? 'bg-[#EEF2FF] dark:bg-[#6366F1]/15'
-                                    : 'hover:bg-gray-50 dark:hover:bg-[#232650]/60'
-                                }`}
-                              >
-                                <span className="text-base w-6 text-center flex-shrink-0">{p.icon}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-xs font-bold leading-tight ${selectedPlatform === p.id ? 'text-[#6366F1] dark:text-[#A5B4FC]' : 'text-gray-900 dark:text-white'}`}>
-                                    {p.label}
-                                  </p>
-                                  <p className="text-[10px] text-gray-400 leading-tight">{p.desc}</p>
-                                </div>
-                                {selectedPlatform === p.id && (
-                                  <span className="w-5 h-5 rounded-full bg-[#6366F1] flex items-center justify-center flex-shrink-0">
-                                    <Check size={10} className="text-white" />
-                                  </span>
-                                )}
-                              </button>
-                            </React.Fragment>
-                          ))}
-                        </div>
+                  {platformDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden">
+                      <div className="py-1.5">
+                        {PLATFORMS.map((p, idx) => (
+                          <React.Fragment key={p.id}>
+                            {idx === 1 && <div className="h-px bg-gray-100 dark:bg-[#232650] mx-3 my-1" />}
+                            <button
+                              onClick={() => { setSelectedPlatform(p.id); setPlatformDropdownOpen(false); }}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                                selectedPlatform === p.id
+                                  ? 'bg-[#EEF2FF] dark:bg-[#6366F1]/15'
+                                  : 'hover:bg-gray-50 dark:hover:bg-[#232650]/60'
+                              }`}
+                            >
+                              <span className="text-base w-6 text-center flex-shrink-0">{p.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-xs font-bold leading-tight ${selectedPlatform === p.id ? 'text-[#6366F1] dark:text-[#A5B4FC]' : 'text-gray-900 dark:text-white'}`}>
+                                  {p.label}
+                                </p>
+                                <p className="text-[10px] text-gray-400 leading-tight">{p.desc}</p>
+                              </div>
+                              {selectedPlatform === p.id && (
+                                <span className="w-5 h-5 rounded-full bg-[#6366F1] flex items-center justify-center flex-shrink-0">
+                                  <Check size={10} className="text-white" />
+                                </span>
+                              )}
+                            </button>
+                          </React.Fragment>
+                        ))}
                       </div>
-                    )}
-                  </div>
-
-                  {currentPlatform && selectedPlatform !== 'none' && (
-                    <div className="mt-2.5 flex items-start gap-2 p-2.5 text-[10px] bg-[#EEF2FF] dark:bg-[#6366F1]/10 rounded-xl border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
-                      <span className="flex-shrink-0 mt-0.5">{currentPlatform.icon}</span>
-                      <span className="text-gray-600 dark:text-gray-400 leading-relaxed">{currentPlatform.hint}</span>
                     </div>
                   )}
                 </div>
 
-                {/* ── Aspect Ratio ─────────────────────────────── */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
-                    Aspect Ratio
-                  </p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {ASPECT_RATIOS.map(r => (
-                      <button
-                        key={r}
-                        onClick={() => setAspectRatio(r)}
-                        className={`py-1.5 rounded-lg text-[11px] font-semibold text-center transition-all ${
-                          aspectRatio === r
-                            ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
-                            : 'bg-gray-100 dark:bg-[#0d1030] text-gray-600 dark:text-gray-400 hover:bg-[#EEF2FF] hover:text-[#6366F1] dark:hover:bg-[#6366F1]/10 dark:hover:text-[#A5B4FC] border border-gray-200 dark:border-[#232650]'
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
+                {currentPlatform && selectedPlatform !== 'none' && (
+                  <div className="mt-2.5 flex items-start gap-2 p-2.5 text-[10px] bg-[#EEF2FF] dark:bg-[#6366F1]/10 rounded-xl border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
+                    <span className="flex-shrink-0 mt-0.5">{currentPlatform.icon}</span>
+                    <span className="text-gray-600 dark:text-gray-400 leading-relaxed">{currentPlatform.hint}</span>
                   </div>
-                  {aspectRatio === 'None' && (
-                    <p className="text-[10px] text-gray-400 mt-2">No ratio appended to prompts</p>
-                  )}
-                  {aspectRatio === 'Random' && (
-                    <p className="text-[10px] text-[#6366F1] dark:text-[#A5B4FC] mt-2">A random ratio is picked each time</p>
-                  )}
-                </div>
+                )}
               </div>
-            )}
+
+              {/* ── Aspect Ratio ─────────────────────────────── */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
+                  Aspect Ratio
+                </p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {ASPECT_RATIOS.map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setAspectRatio(r)}
+                      className={`py-1.5 rounded-lg text-[11px] font-semibold text-center transition-all ${
+                        aspectRatio === r
+                          ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
+                          : 'bg-gray-100 dark:bg-[#0d1030] text-gray-600 dark:text-gray-400 hover:bg-[#EEF2FF] hover:text-[#6366F1] dark:hover:bg-[#6366F1]/10 dark:hover:text-[#A5B4FC] border border-gray-200 dark:border-[#232650]'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                {aspectRatio === 'None' && (
+                  <p className="text-[10px] text-gray-400 mt-2">No ratio appended to prompts</p>
+                )}
+                {aspectRatio === 'Random' && (
+                  <p className="text-[10px] text-[#6366F1] dark:text-[#A5B4FC] mt-2">A random ratio is picked each time</p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* ── Progress Stats ─────────────────────────────────── */}
