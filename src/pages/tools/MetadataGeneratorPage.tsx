@@ -11,7 +11,7 @@ import { callAI, imageToBase64ForAI, extractJSON } from '../../services/aiServic
 import {
   Upload, Image, Download, RefreshCw, Settings, ChevronDown,
   ChevronUp, Trash2, Copy, X, AlertCircle, Type, AlignLeft, Hash, Zap,
-  ZoomIn, Maximize2, Plus, RotateCcw
+  ZoomIn, Maximize2, Plus, RotateCcw, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
@@ -281,7 +281,6 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const [selectedMarketplace, setSelectedMarketplace] = useState('Adobe Stock');
   const [isGenerating, setIsGenerating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const [prefixSuffixOpen, setPrefixSuffixOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -493,6 +492,20 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
 
         {/* ── Settings Sidebar ── */}
         <div className="lg:w-72 flex-shrink-0 space-y-4">
+          {/* Gradient header card */}
+          <div className="rounded-2xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] p-4 text-white shadow-lg shadow-[#6366F1]/25">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={18} className="text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-sm leading-tight">Generation Settings</p>
+                <p className="text-white/70 text-[11px] leading-tight mt-0.5">
+                  {selectedMarketplace} · {settings.keywordStyle.charAt(0).toUpperCase() + settings.keywordStyle.slice(1)} words
+                </p>
+              </div>
+            </div>
+          </div>
           <InlineApiKeySetup />
           <Card padding="none">
             <button
@@ -588,34 +601,19 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                 <div className="h-px bg-gray-100 dark:bg-[#0d1030]" />
 
                 <div className="space-y-3">
-                  {/* Image Background — button style */}
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-2">Image Background</label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <button
-                        onClick={() => setSettings(s => ({ ...s, pngBackground: !s.pngBackground }))}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-colors text-center ${settings.pngBackground ? 'bg-[#6366F1] text-white shadow-sm' : 'bg-gray-100 dark:bg-[#0d1030] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                      >
-                        PNG Transparent
-                      </button>
-                      <button
-                        onClick={() => setSettings(s => ({ ...s, whiteBackground: !s.whiteBackground }))}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-colors text-center ${settings.whiteBackground ? 'bg-[#6366F1] text-white shadow-sm' : 'bg-gray-100 dark:bg-[#0d1030] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                      >
-                        White BG
-                      </button>
-                    </div>
-                    {(settings.pngBackground || settings.whiteBackground) && (
-                      <p className="text-[10px] text-gray-400 mt-1.5">
-                        {settings.pngBackground && settings.whiteBackground
-                          ? 'PNG transparent + white BG hints sent to AI'
-                          : settings.pngBackground
-                            ? 'AI optimized for transparent PNG images'
-                            : 'AI optimized for white background images'}
-                      </p>
-                    )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Title Keyword Priority</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#6366F1]/10 text-[#6366F1] dark:bg-[#6366F1]/20 dark:text-[#A5B4FC]">Always On</span>
                   </div>
-                  <Toggle checked={settings.keywordPriority} onChange={v => setSettings(s => ({ ...s, keywordPriority: v }))} label="Title Keyword Priority" />
+                  <Toggle checked={settings.pngBackground} onChange={v => setSettings(s => ({ ...s, pngBackground: v }))} label="Transparent Background" />
+                  <Toggle checked={settings.whiteBackground} onChange={v => setSettings(s => ({ ...s, whiteBackground: v }))} label="White Background" />
+                  {(settings.pngBackground || settings.whiteBackground) && (
+                    <p className="text-[10px] text-gray-400 bg-[#EEF2FF] dark:bg-[#6366F1]/10 p-2 rounded-lg">
+                      {settings.pngBackground
+                        ? 'AI optimized for transparent PNG images'
+                        : 'AI optimized for white background images'}
+                    </p>
+                  )}
                 </div>
                 {settings.keywordPriority && (
                   <p className="text-[10px] text-gray-400 bg-[#EEF2FF] dark:bg-[#6366F1]/10 p-2 rounded-lg">
@@ -627,15 +625,8 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
 
                 {/* Title Prefix / Suffix */}
                 <div>
-                  {/* Header row: label + expand + on/off toggle */}
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setPrefixSuffixOpen(v => !v)}
-                      className="flex-1 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-[#6366F1] dark:hover:text-[#A5B4FC] transition-colors text-left"
-                    >
-                      Title Prefix / Suffix
-                      {prefixSuffixOpen ? <ChevronUp size={12} className="ml-auto" /> : <ChevronDown size={12} className="ml-auto" />}
-                    </button>
+                    <span className="flex-1 text-xs font-semibold text-gray-600 dark:text-gray-400">Title Prefix / Suffix</span>
                     <Toggle
                       checked={settings.titleAffixEnabled}
                       onChange={v => setSettings(s => ({ ...s, titleAffixEnabled: v }))}
@@ -643,8 +634,8 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                     />
                   </div>
 
-                  {prefixSuffixOpen && (
-                    <div className={`mt-3 space-y-3 transition-opacity ${!settings.titleAffixEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                  {settings.titleAffixEnabled && (
+                    <div className="mt-3 space-y-3">
                       <div>
                         <label className="text-[10px] text-gray-400 block mb-1">Prefix — added before title</label>
                         <input
@@ -729,11 +720,22 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
         <div className="flex-1 space-y-4 min-w-0">
           {/* Header */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Metadata Generator</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Generate SEO-optimized metadata for <strong className="text-[#6366F1]">{selectedMarketplace}</strong>
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center shadow-md shadow-[#6366F1]/30 flex-shrink-0">
+                <Sparkles size={18} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Metadata Generator</h1>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">AI metadata for</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#6366F1] text-white">
+                    {selectedMarketplace}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#8B5CF6]/15 text-[#8B5CF6] dark:bg-[#8B5CF6]/20 dark:text-[#C4B5FD] border border-[#8B5CF6]/30">
+                    {settings.keywordStyle.charAt(0).toUpperCase() + settings.keywordStyle.slice(1)} words
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {/* Export dropdown */}

@@ -89,6 +89,7 @@ interface SidebarNavItemProps {
 
 const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level = 0 }) => {
   const location = useLocation();
+  const { toggleSidebarCollapse } = useStore();
   const [expanded, setExpanded] = useState(() =>
     item.children?.some(c => location.pathname.startsWith(c.path)) || location.pathname === item.path
   );
@@ -102,6 +103,52 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level 
   const isActive = location.pathname === item.path ||
     (item.children && item.children.some(c => location.pathname === c.path));
   const isParentOfActive = item.children?.some(c => location.pathname.startsWith(c.path));
+
+  if (item.children && collapsed) {
+    return (
+      <div>
+        <button
+          onClick={() => setExpanded(v => !v)}
+          title={item.label}
+          className={cn(
+            'w-full flex items-center justify-center px-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
+            isParentOfActive || expanded
+              ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
+              : 'text-slate-600 dark:text-gray-400 hover:bg-[#F0F4FB] dark:hover:bg-[#232650] hover:text-slate-900 dark:hover:text-gray-200'
+          )}
+        >
+          <span className={cn('flex-shrink-0', (isParentOfActive || expanded) ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:text-gray-400 dark:group-hover:text-gray-300')}>
+            {item.icon}
+          </span>
+          <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+            {item.label}
+          </div>
+        </button>
+        {expanded && (
+          <div className="mt-0.5 space-y-0.5">
+            {item.children.map(child => (
+              <Link
+                key={child.id}
+                to={child.path}
+                title={child.label}
+                className={cn(
+                  'flex items-center justify-center p-2 rounded-xl transition-all duration-200 group relative',
+                  location.pathname === child.path
+                    ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
+                    : 'text-slate-400 dark:text-gray-500 hover:bg-[#F0F4FB] dark:hover:bg-[#232650] hover:text-slate-700 dark:hover:text-gray-300'
+                )}
+              >
+                <span className="flex-shrink-0">{child.icon}</span>
+                <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                  {child.label}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (item.children && !collapsed) {
     return (
