@@ -36,7 +36,6 @@ const ALL_QUICK_TOOLS = [
   { label: 'AI Metadata', path: '/tools/metadata', icon: <Image size={20} />, color: '#6366F1', desc: 'Generate for 100+ images' },
   { label: 'Image to Prompt', path: '/tools/image-to-prompt', icon: <Zap size={20} />, color: '#8B5CF6', desc: 'For Midjourney & more' },
   { label: 'Content Writer', path: '/tools/content-writer', icon: <FileText size={20} />, color: '#F59E0B', desc: 'Blogs, scripts & more' },
-{ label: 'Social Scheduler', path: '/tools/social-scheduler', icon: <Globe size={20} />, color: '#EF4444', desc: '6 platforms' },
   { label: 'Word Counter', path: '/tools/word-counter', icon: <Hash size={20} />, color: '#10B981', desc: 'Real-time analysis' },
   { label: 'Event Calendar', path: '/tools/event-calendar', icon: <Calendar size={20} />, color: '#3B82F6', desc: 'Global holidays' },
 ];

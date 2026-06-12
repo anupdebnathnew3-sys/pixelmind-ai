@@ -30,8 +30,7 @@ const navItems: NavItem[] = [
       { id: 'metadata', label: 'AI Metadata Generator', icon: <Image size={16} />, path: '/tools/metadata', badge: 'Core' },
       { id: 'img2prompt', label: 'Image To Prompt', icon: <ImagePlus size={16} />, path: '/tools/image-to-prompt' },
       { id: 'content', label: 'AI Content Writer', icon: <FileText size={16} />, path: '/tools/content-writer' },
-      { id: 'scheduler', label: 'Social Media', icon: <Globe size={16} />, path: '/tools/social-scheduler' },
-      { id: 'wordcount', label: 'Word Counter', icon: <Hash size={16} />, path: '/tools/word-counter' },
+{ id: 'wordcount', label: 'Word Counter', icon: <Hash size={16} />, path: '/tools/word-counter' },
       { id: 'slogan', label: 'Slogan Generator', icon: <MessageSquare size={16} />, path: '/tools/slogan-generator' },
       { id: 'age-calc', label: 'Age Calculator', icon: <Calculator size={16} />, path: '/tools/age-calculator' },
     ]

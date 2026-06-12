@@ -406,14 +406,7 @@ export const HomePage: React.FC = () => {
                 desc: 'Blog posts, product descriptions, and marketing copy with tone and style control.',
                 path: '/tools/content-writer',
               },
-              {
-                icon: <Globe size={20} />,
-                color: '#3B82F6',
-                title: 'Social Media Scheduler',
-                desc: 'Plan and schedule posts for Instagram, Twitter, LinkedIn, and Facebook.',
-                path: '/tools/social-scheduler',
-              },
-              {
+{
                 icon: <MessageSquare size={20} />,
                 color: '#EF4444',
                 title: 'Slogan Generator',

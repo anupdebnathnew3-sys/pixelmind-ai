@@ -24,7 +24,6 @@ import { BillingPage } from './pages/dashboard/BillingPage';
 import { MetadataGeneratorPage } from './pages/tools/MetadataGeneratorPage';
 import { ImageToPromptPage } from './pages/tools/ImageToPromptPage';
 import { ContentWriterPage } from './pages/tools/ContentWriterPage';
-import { SocialSchedulerPage } from './pages/tools/SocialSchedulerPage';
 import { EventCalendarPage } from './pages/tools/EventCalendarPage';
 import { WordCounterPage } from './pages/tools/WordCounterPage';
 import { AgeCalculatorPage } from './pages/tools/AgeCalculatorPage';
@@ -171,7 +170,6 @@ export default function App() {
         <Route path="/tools/metadata" element={<ToolRoute toolId="metadata" element={<MetadataGeneratorPage guestAllowed />} />} />
         <Route path="/tools/image-to-prompt" element={<ToolRoute toolId="image-to-prompt" element={<ImageToPromptPage guestAllowed />} />} />
         <Route path="/tools/content-writer" element={<ToolRoute toolId="content-writer" element={<ContentWriterPage guestAllowed />} />} />
-        <Route path="/tools/social-scheduler" element={<ToolRoute toolId="social-scheduler" element={<SocialSchedulerPage guestAllowed />} />} />
         <Route path="/tools/event-calendar" element={<ToolRoute toolId="event-calendar" element={<EventCalendarPage guestAllowed />} />} />
         <Route path="/tools/word-counter" element={<ToolRoute toolId="word-counter" element={<WordCounterPage guestAllowed />} />} />
         <Route path="/tools/age-calculator" element={<ToolRoute toolId="age-calculator" element={<AgeCalculatorPage guestAllowed />} />} />
