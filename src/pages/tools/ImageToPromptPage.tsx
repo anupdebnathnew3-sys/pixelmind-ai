@@ -553,18 +553,6 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
             </div>
           )}
 
-          {/* ── Generate button ────────────────────────────── */}
-          {pendingImages.length > 0 && (
-            <Button
-              fullWidth
-              size="sm"
-              loading={isGenerating}
-              onClick={generateAll}
-              icon={<Zap size={14} />}
-            >
-              {isGenerating ? 'Generating…' : `Generate All (${pendingImages.length})`}
-            </Button>
-          )}
         </div>
 
         {/* ════════════════════════════════════════════════════
@@ -596,6 +584,16 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
+              {pendingImages.length > 0 && (
+                <Button
+                  size="sm"
+                  loading={isGenerating}
+                  onClick={generateAll}
+                  icon={<Zap size={13} />}
+                >
+                  {isGenerating ? 'Generating…' : `Generate All (${pendingImages.length})`}
+                </Button>
+              )}
               {totalCount > 0 && (
                 <Button
                   variant="ghost"
