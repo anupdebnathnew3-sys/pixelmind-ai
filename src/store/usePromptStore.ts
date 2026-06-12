@@ -279,8 +279,8 @@ export function buildMetadataPrompt(
 }
 
 const PLATFORM_INSTRUCTIONS: Record<string, string> = {
-  midjourney: `Format: /imagine prompt: [detailed description], [style modifiers], [technical specs] --ar {{aspectRatio}} --q 2 --v 6
-Start with "/imagine prompt:" and end with "--ar {{aspectRatio}} --q 2 --v 6"
+  midjourney: `Format: /imagine prompt: [detailed description], [style modifiers], [technical specs] --ar {{aspectRatio}}
+Start with "/imagine prompt:" and end with "--ar {{aspectRatio}}"
 Include: artistic style, lighting, camera angle, quality descriptors`,
   flux: `Format: Natural language description optimized for Flux model
 Include: subject, lighting, color palette, style, mood, technical quality

@@ -63,7 +63,7 @@ const PROMPT_STYLES = [
 
 const PLATFORMS = [
   { id: 'none',       label: 'None',             icon: '🚫', desc: 'No specific platform',   hint: 'General image description without platform-specific formatting' },
-  { id: 'midjourney', label: 'Midjourney',        icon: '🎨', desc: 'Discord bot',             hint: '/imagine prompt: with --ar --v 6 flags' },
+  { id: 'midjourney', label: 'Midjourney',        icon: '🎨', desc: 'Discord bot',             hint: '/imagine prompt: with --ar flag' },
   { id: 'flux',       label: 'Flux',              icon: '⚡', desc: 'High quality diffusion',  hint: 'Natural language with style, lighting & mood' },
   { id: 'ideogram',   label: 'Ideogram',          icon: '💡', desc: 'Text + image AI',         hint: 'Optimized for text-in-image workflows' },
   { id: 'dalle',      label: 'DALL·E 3',          icon: '🤖', desc: 'OpenAI',                  hint: 'Descriptive natural language for DALL·E 3' },
@@ -552,6 +552,19 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
               </p>
             </div>
           )}
+
+          {/* ── Generate button ────────────────────────────── */}
+          {pendingImages.length > 0 && (
+            <Button
+              fullWidth
+              size="sm"
+              loading={isGenerating}
+              onClick={generateAll}
+              icon={<Zap size={14} />}
+            >
+              {isGenerating ? 'Generating…' : `Generate All (${pendingImages.length})`}
+            </Button>
+          )}
         </div>
 
         {/* ════════════════════════════════════════════════════
@@ -583,16 +596,6 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {pendingImages.length > 0 && (
-                <Button
-                  size="sm"
-                  loading={isGenerating}
-                  onClick={generateAll}
-                  icon={<Zap size={13} />}
-                >
-                  {isGenerating ? 'Generating…' : `Generate All (${pendingImages.length})`}
-                </Button>
-              )}
               {totalCount > 0 && (
                 <Button
                   variant="ghost"
@@ -661,11 +664,6 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {pendingImages.length > 0 && (
-                  <Button size="sm" loading={isGenerating} icon={<Zap size={13} />} onClick={generateAll}>
-                    {isGenerating ? 'Generating…' : `Generate${pendingImages.length > 1 ? ` All (${pendingImages.length})` : ''}`}
-                  </Button>
-                )}
                 <button
                   onClick={open}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#6366F1] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#6366F1]/15 rounded-lg hover:bg-[#6366F1] hover:text-white dark:hover:bg-[#6366F1] dark:hover:text-white transition-colors border border-[#A5B4FC]/40 dark:border-[#6366F1]/25"
