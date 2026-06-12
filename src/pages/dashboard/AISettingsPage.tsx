@@ -166,7 +166,9 @@ export const AISettingsPage: React.FC<AISettingsPageProps> = ({ guestAllowed = f
     setEditingKey(key);
     setForm({
       name: key.name, provider: key.provider, key: key.key,
-      baseUrl: key.baseUrl || '', modelName: key.modelName || '', providerType: key.providerType || '',
+      baseUrl: key.baseUrl || '',
+      modelName: key.modelName || DEFAULT_MODELS[key.provider] || '',
+      providerType: key.providerType || '',
     });
     setShowModal(true);
   };
@@ -683,7 +685,9 @@ export const AISettingsPage: React.FC<AISettingsPageProps> = ({ guestAllowed = f
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#0d1030] text-gray-900 dark:text-gray-100 text-sm focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/20 outline-none"
                 >
                   {PROVIDER_MODELS[form.provider].map(m => (
-                    <option key={m.value} value={m.value}>{m.vision ? '👁 ' : '📝 '}{m.label}</option>
+                    <option key={m.value} value={m.value}>
+                      {m.vision ? '👁 ' : '📝 '}{m.label}{m.value === DEFAULT_MODELS[form.provider] ? ' ⭐ Recommended' : ''}
+                    </option>
                   ))}
                   <option value="_custom">✏️ Custom model name…</option>
                 </select>
