@@ -158,7 +158,7 @@ export const AISettingsPage: React.FC<AISettingsPageProps> = ({ guestAllowed = f
 
   const openAddModal = () => {
     setEditingKey(null);
-    setForm({ name: '', provider: 'openai', key: '', baseUrl: '', modelName: 'gpt-4o', providerType: '' });
+    setForm({ name: 'OpenAI', provider: 'openai', key: '', baseUrl: '', modelName: 'gpt-4o', providerType: '' });
     setShowModal(true);
   };
 
@@ -172,8 +172,10 @@ export const AISettingsPage: React.FC<AISettingsPageProps> = ({ guestAllowed = f
   };
 
   const handleProviderChange = (provider: string) => {
+    const providerLabel = AI_PROVIDERS.find(p => p.value === provider)?.label || '';
     setForm(f => ({
       ...f, provider,
+      name: f.name === '' || AI_PROVIDERS.some(p => p.label === f.name) ? providerLabel : f.name,
       modelName: DEFAULT_MODELS[provider] || '',
       baseUrl: provider === 'ollama' ? 'http://localhost:11434/v1' : '',
     }));
