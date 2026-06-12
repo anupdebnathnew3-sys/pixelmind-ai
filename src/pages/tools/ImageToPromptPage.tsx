@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useStore } from '../../store/useStore';
 import { useGuestStore } from '../../store/useGuestStore';
@@ -10,7 +9,7 @@ import { callAI, imageToBase64ForAI } from '../../services/aiService';
 import {
   Upload, Copy, RefreshCw, Zap, X, AlertCircle, Trash2,
   Image as ImageIcon, ZoomIn, Clipboard, ChevronDown, ChevronUp,
-  Plus, RotateCcw, Check, Wand2
+  Plus, RotateCcw, Check, Wand2, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
@@ -186,12 +185,23 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
     open();
   };
 
+  const downloadPrompt = (img: UploadedImage) => {
+    if (!img.prompt) return;
+    const blob = new Blob([img.prompt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompt-${img.file.name.replace(/\.[^/.]+$/, '')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Prompt downloaded!');
+  };
+
   // ── Generate all ───────────────────────────────────────────────────────────
   const generateAll = async () => {
     const pending = images.filter(i => i.status === 'pending');
     if (pending.length === 0) { toast.error('No images to process'); return; }
 
-    // Guest credit gate
     if (!isAuthenticated && guestCredits <= 0) {
       toast.error('No guest credits remaining. Create a free account for 500 credits.');
       return;
@@ -333,16 +343,19 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
       {/* ── Lightbox ── */}
       {lightboxSrc && (
         <div
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setLightboxSrc(null)}
         >
-          <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/20"
+            onClick={() => setLightboxSrc(null)}
+          >
             <X size={18} />
           </button>
           <img
             src={lightboxSrc}
             alt="Preview"
-            className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+            className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl"
             onClick={e => e.stopPropagation()}
           />
           <p className="absolute bottom-4 text-white/40 text-xs">Click anywhere to close</p>
@@ -357,48 +370,90 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
         <div className="lg:w-72 flex-shrink-0 space-y-4">
           <InlineApiKeySetup />
 
-          <Card padding="none">
+          {/* Active settings summary */}
+          <div className="flex items-center gap-3 px-3.5 py-3 bg-gradient-to-r from-[#6366F1]/8 to-[#8B5CF6]/8 dark:from-[#6366F1]/15 dark:to-[#8B5CF6]/15 rounded-2xl border border-[#6366F1]/20 dark:border-[#6366F1]/25">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center flex-shrink-0 shadow-md shadow-[#6366F1]/30">
+              <Wand2 size={14} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Image to Prompt</p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight mt-0.5">
+                <span style={{ color: currentStyle?.color }} className="font-semibold">{currentStyle?.label}</span>
+                {' · '}
+                {currentPlatform?.icon} {selectedPlatform === 'none' ? 'No Platform' : currentPlatform?.label}
+              </p>
+            </div>
+          </div>
+
+          {/* Generation Settings Card */}
+          <div className="bg-white dark:bg-[#191c40] rounded-2xl border border-gray-200 dark:border-[#232650] overflow-hidden shadow-sm">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-[#0d1030]/50 rounded-t-2xl transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-[#0d1030]/40 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <Zap size={16} className="text-[#6366F1]" />
-                <span className="font-semibold text-gray-900 dark:text-white text-sm">Generation Settings</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center">
+                  <Zap size={12} className="text-[#6366F1]" />
+                </div>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Generation Settings</span>
               </div>
-              {sidebarOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              {sidebarOpen
+                ? <ChevronUp size={15} className="text-gray-400" />
+                : <ChevronDown size={15} className="text-gray-400" />}
             </button>
 
             {sidebarOpen && (
-              <div className="px-4 pb-4 space-y-5 border-t border-gray-100 dark:border-[#232650] pt-4">
+              <div className="border-t border-gray-100 dark:border-[#232650] px-4 pb-5 pt-4 space-y-5">
 
                 {/* ── Prompt Style ─────────────────────────────── */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                    <Wand2 size={11} /> Prompt Style
+                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <Wand2 size={10} /> Prompt Style
                   </p>
                   <div className="space-y-1.5">
                     {PROMPT_STYLES.map(style => (
                       <button
                         key={style.id}
                         onClick={() => setPromptStyle(style.id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl border-2 transition-all text-left ${
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-left group ${
                           promptStyle === style.id
-                            ? 'border-2 text-white shadow-sm'
-                            : 'border-gray-200 dark:border-[#232650] hover:border-gray-300 dark:hover:border-[#2f3260] bg-white dark:bg-[#191c40]'
+                            ? 'shadow-sm'
+                            : 'border-gray-200 dark:border-[#232650] hover:border-gray-300 dark:hover:border-[#2f3260] bg-white dark:bg-[#191c40] hover:bg-gray-50 dark:hover:bg-[#0d1030]/50'
                         }`}
-                        style={promptStyle === style.id ? { borderColor: style.color, backgroundColor: style.color } : {}}
+                        style={
+                          promptStyle === style.id
+                            ? { borderColor: style.color, backgroundColor: style.color + '12' }
+                            : {}
+                        }
                       >
-                        <span className="text-sm font-bold w-5 text-center flex-shrink-0">{style.icon}</span>
-                        <div className="min-w-0">
-                          <p className={`text-xs font-bold leading-tight ${promptStyle === style.id ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                            {style.label}
-                          </p>
-                          <p className={`text-[10px] leading-tight ${promptStyle === style.id ? 'text-white/75' : 'text-gray-400'}`}>
-                            {style.desc}
-                          </p>
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold transition-all"
+                          style={{
+                            backgroundColor: promptStyle === style.id ? style.color : style.color + '20',
+                            color: promptStyle === style.id ? 'white' : style.color,
+                          }}
+                        >
+                          {style.icon}
                         </div>
-                        {promptStyle === style.id && <Check size={12} className="text-white ml-auto flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-xs font-bold leading-tight"
+                            style={{ color: promptStyle === style.id ? style.color : undefined }}
+                          >
+                            {promptStyle !== style.id ? (
+                              <span className="text-gray-900 dark:text-white">{style.label}</span>
+                            ) : style.label}
+                          </p>
+                          <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{style.desc}</p>
+                        </div>
+                        {promptStyle === style.id && (
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: style.color }}
+                          >
+                            <Check size={10} className="text-white" />
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -408,27 +463,26 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
 
                 {/* ── AI Platform ──────────────────────────────── */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5">
+                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
                     AI Platform
                   </p>
-
                   <div className="relative" ref={platformDropdownRef}>
                     <button
                       onClick={() => setPlatformDropdownOpen(!platformDropdownOpen)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-all ${
                         selectedPlatform !== 'none'
-                          ? 'border-[#6366F1] bg-[#6366F1] shadow-sm'
+                          ? 'border-[#6366F1] bg-[#6366F1] shadow-sm shadow-[#6366F1]/30'
                           : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 bg-white dark:bg-[#191c40]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="text-base flex-shrink-0 w-6 text-center">{currentPlatform?.icon}</span>
+                        <span className="text-base w-6 text-center flex-shrink-0">{currentPlatform?.icon}</span>
                         <div className="text-left">
                           <p className={`text-xs font-bold leading-tight ${selectedPlatform !== 'none' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                            Platform
+                            {selectedPlatform === 'none' ? 'No Platform' : currentPlatform?.label}
                           </p>
-                          <p className={`text-[10px] leading-tight ${selectedPlatform !== 'none' ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {currentPlatform?.label}
+                          <p className={`text-[10px] leading-tight ${selectedPlatform !== 'none' ? 'text-white/65' : 'text-gray-400'}`}>
+                            {currentPlatform?.desc}
                           </p>
                         </div>
                       </div>
@@ -439,7 +493,7 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
                     </button>
 
                     {platformDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-xl overflow-hidden">
+                      <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden">
                         <div className="py-1.5">
                           {PLATFORMS.map((p, idx) => (
                             <React.Fragment key={p.id}>
@@ -473,7 +527,7 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
                   </div>
 
                   {currentPlatform && selectedPlatform !== 'none' && (
-                    <div className="mt-2.5 flex items-start gap-2 text-[10px] bg-[#EEF2FF] dark:bg-[#6366F1]/10 px-3 py-2 rounded-lg border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
+                    <div className="mt-2.5 flex items-start gap-2 p-2.5 text-[10px] bg-[#EEF2FF] dark:bg-[#6366F1]/10 rounded-xl border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
                       <span className="flex-shrink-0 mt-0.5">{currentPlatform.icon}</span>
                       <span className="text-gray-600 dark:text-gray-400 leading-relaxed">{currentPlatform.hint}</span>
                     </div>
@@ -482,17 +536,17 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
 
                 {/* ── Aspect Ratio ─────────────────────────────── */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5">
+                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
                     Aspect Ratio
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="grid grid-cols-4 gap-1.5">
                     {ASPECT_RATIOS.map(r => (
                       <button
                         key={r}
                         onClick={() => setAspectRatio(r)}
-                        className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors ${
+                        className={`py-1.5 rounded-lg text-[11px] font-semibold text-center transition-all ${
                           aspectRatio === r
-                            ? 'bg-[#6366F1] text-white shadow-sm'
+                            ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
                             : 'bg-gray-100 dark:bg-[#0d1030] text-gray-600 dark:text-gray-400 hover:bg-[#EEF2FF] hover:text-[#6366F1] dark:hover:bg-[#6366F1]/10 dark:hover:text-[#A5B4FC] border border-gray-200 dark:border-[#232650]'
                         }`}
                       >
@@ -501,117 +555,215 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
                     ))}
                   </div>
                   {aspectRatio === 'None' && (
-                    <p className="text-[10px] text-gray-400 mt-1.5">No ratio in generated prompts</p>
+                    <p className="text-[10px] text-gray-400 mt-2">No ratio appended to prompts</p>
+                  )}
+                  {aspectRatio === 'Random' && (
+                    <p className="text-[10px] text-[#6366F1] dark:text-[#A5B4FC] mt-2">A random ratio is picked each time</p>
                   )}
                 </div>
               </div>
             )}
-          </Card>
+          </div>
 
-          {/* ── Stats ───────────────────────────────────────────── */}
+          {/* ── Progress Stats ─────────────────────────────────── */}
           {totalCount > 0 && (
-            <Card padding="sm">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Progress</p>
+            <div className="bg-white dark:bg-[#191c40] rounded-2xl border border-gray-200 dark:border-[#232650] p-4 shadow-sm">
+              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Progress</p>
               <div className="space-y-2">
                 {[
                   { label: 'Total',     value: totalCount,                                       color: 'text-gray-900 dark:text-white' },
-                  { label: 'Generated', value: doneCount,                                        color: 'text-green-600' },
+                  { label: 'Generated', value: doneCount,                                        color: 'text-emerald-600 dark:text-emerald-400' },
                   { label: 'Pending',   value: pendingImages.length,                             color: 'text-amber-500' },
                   { label: 'Errors',    value: images.filter(i => i.status === 'error').length,  color: 'text-red-500' },
                 ].map(row => (
-                  <div key={row.label} className="flex justify-between text-xs">
-                    <span className="text-gray-500">{row.label}</span>
-                    <span className={`font-bold ${row.color}`}>{row.value}</span>
+                  <div key={row.label} className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500 dark:text-gray-400">{row.label}</span>
+                    <span className={`font-bold tabular-nums ${row.color}`}>{row.value}</span>
                   </div>
                 ))}
-                <div className="h-1.5 bg-gray-100 dark:bg-[#0d1030] rounded-full mt-2">
-                  <div
-                    className="h-full bg-[#6366F1] rounded-full transition-all duration-500"
-                    style={{ width: totalCount > 0 ? `${(doneCount / totalCount) * 100}%` : '0%' }}
-                  />
-                </div>
               </div>
-            </Card>
+              <div className="h-1.5 bg-gray-100 dark:bg-[#0d1030] rounded-full mt-3 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] rounded-full transition-all duration-700"
+                  style={{ width: totalCount > 0 ? `${(doneCount / totalCount) * 100}%` : '0%' }}
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5 text-right tabular-nums">
+                {totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0}% complete
+              </p>
+            </div>
           )}
         </div>
 
         {/* ════════════════════════════════════════════════════
             MAIN CONTENT
             ════════════════════════════════════════════════════ */}
-        <div className="flex-1 space-y-4 min-w-0">
+        <div className="flex-1 space-y-5 min-w-0">
 
-          {/* ── Header ──────────────────────────────────────────── */}
-          <div className="flex items-center justify-between">
+          {/* ── Page Header ─────────────────────────────────────── */}
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Image to Prompt Generator</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Upload images → Get{' '}
-                <strong className="text-[#6366F1]">{selectedPlatform === 'none' ? 'general' : currentPlatform?.label}</strong>
-                {' '}prompts in{' '}
-                <span style={{ color: currentStyle?.color }} className="font-semibold">{currentStyle?.label}</span>
-                {' '}style
-              </p>
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center shadow-md shadow-[#6366F1]/25 flex-shrink-0">
+                  <Wand2 size={16} className="text-white" />
+                </div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Image to Prompt Generator</h1>
+              </div>
+              <div className="flex items-center gap-2 ml-[3.25rem] flex-wrap">
+                <span className="text-sm text-gray-500 dark:text-gray-400">AI prompts for</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#EEF2FF] dark:bg-[#6366F1]/15 text-[#6366F1] dark:text-[#A5B4FC] text-[11px] font-semibold border border-[#A5B4FC]/30 dark:border-[#6366F1]/25">
+                  {currentPlatform?.icon} {selectedPlatform === 'none' ? 'All Platforms' : currentPlatform?.label}
+                </span>
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border"
+                  style={{ color: currentStyle?.color, backgroundColor: (currentStyle?.color ?? '#6366F1') + '15', borderColor: (currentStyle?.color ?? '#6366F1') + '35' }}
+                >
+                  {currentStyle?.icon} {currentStyle?.label}
+                </span>
+              </div>
             </div>
-            {totalCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<Trash2 size={14} />}
-                onClick={() => setImages([])}
-                className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                Clear All
-              </Button>
-            )}
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {pendingImages.length > 0 && (
+                <Button
+                  size="sm"
+                  loading={isGenerating}
+                  onClick={generateAll}
+                  icon={<Zap size={13} />}
+                >
+                  {isGenerating ? 'Generating…' : `Generate All (${pendingImages.length})`}
+                </Button>
+              )}
+              {totalCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setImages([])}
+                  className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* ── Upload Zone ─────────────────────────────────────── */}
           {images.length === 0 ? (
             <div
               {...getRootProps()}
-              className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
+              className={`relative overflow-hidden border-2 border-dashed rounded-3xl cursor-pointer transition-all duration-300 ${
                 isDragActive
-                  ? 'border-[#6366F1] bg-[#EEF2FF] dark:bg-[#6366F1]/10 scale-[1.01]'
-                  : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1] hover:bg-[#EEF2FF]/40 dark:hover:bg-[#6366F1]/5'
+                  ? 'border-[#6366F1] bg-[#6366F1]/5 dark:bg-[#6366F1]/10 scale-[1.005] shadow-xl shadow-[#6366F1]/10'
+                  : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 hover:bg-gray-50/50 dark:hover:bg-[#6366F1]/3 bg-white dark:bg-[#191c40]'
               }`}
             >
               <input {...getInputProps()} />
-              <div className="flex flex-col items-center gap-3">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${isDragActive ? 'bg-[#6366F1]' : 'bg-[#EEF2FF] dark:bg-[#6366F1]/20'}`}>
-                  <Upload size={26} className={isDragActive ? 'text-white' : 'text-[#6366F1]'} />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {isDragActive ? 'Drop images here!' : 'Drop images or click to upload'}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    JPG, PNG, WEBP — multiple images supported
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button size="sm" variant="secondary">Browse Files</Button>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-                    <Clipboard size={13} />
-                    <span>or <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-[#232650] rounded text-[10px] font-mono border border-gray-200 dark:border-[#2f3260]">Ctrl+V</kbd> to paste</span>
+
+              {/* Drag-active overlay */}
+              {isDragActive && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#6366F1]/5 dark:bg-[#6366F1]/10 backdrop-blur-[2px]">
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center shadow-2xl shadow-[#6366F1]/40 mb-4 animate-bounce">
+                    <Upload size={32} className="text-white" />
                   </div>
+                  <p className="text-xl font-bold text-[#6366F1] dark:text-[#A5B4FC]">Release to upload!</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Drop your images here</p>
+                </div>
+              )}
+
+              {/* Normal state content */}
+              <div className="px-8 pt-10 pb-8">
+                {/* Hero icon + text */}
+                <div className="text-center mb-8">
+                  <div className="relative inline-flex mb-4">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center shadow-xl shadow-[#6366F1]/25">
+                      <ImageIcon size={32} className="text-white" />
+                    </div>
+                    <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-xl bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center shadow-md border-2 border-white dark:border-[#191c40]">
+                      <Wand2 size={12} className="text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Upload Your Images</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    Choose any method below — we'll transform your images into ready-to-use AI prompts
+                  </p>
+                </div>
+
+                {/* Three method cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
+
+                  {/* Browse */}
+                  <div className="group flex flex-col items-center gap-3 p-5 rounded-2xl bg-gray-50 dark:bg-[#0d1030] border border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 hover:bg-[#EEF2FF]/60 dark:hover:bg-[#6366F1]/8 transition-all">
+                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 group-hover:bg-[#6366F1] flex items-center justify-center transition-all group-hover:shadow-lg group-hover:shadow-[#6366F1]/30">
+                      <Upload size={20} className="text-[#6366F1] group-hover:text-white transition-colors" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Browse Files</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Click anywhere to open file browser</p>
+                    </div>
+                    <div className="flex gap-1 flex-wrap justify-center">
+                      {['JPG', 'PNG', 'WEBP'].map(f => (
+                        <span key={f} className="px-1.5 py-0.5 bg-gray-200 dark:bg-[#232650] text-gray-500 dark:text-gray-400 text-[9px] font-bold rounded">{f}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Drag & Drop */}
+                  <div className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-gray-50 dark:bg-[#0d1030] border-2 border-dashed border-gray-200 dark:border-[#232650] transition-all">
+                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Drag & Drop</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Drop images directly onto this area</p>
+                    </div>
+                    <span className="text-[10px] text-[#6366F1] dark:text-[#A5B4FC] font-semibold px-2.5 py-1 rounded-full bg-[#EEF2FF] dark:bg-[#6366F1]/15 border border-[#A5B4FC]/30">
+                      Multiple files OK
+                    </span>
+                  </div>
+
+                  {/* Paste */}
+                  <div className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-gray-50 dark:bg-[#0d1030] border border-gray-200 dark:border-[#232650] transition-all">
+                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center">
+                      <Clipboard size={20} className="text-[#6366F1]" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Paste Image</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Copy any image and press</p>
+                    </div>
+                    <kbd className="px-3 py-1 bg-white dark:bg-[#191c40] rounded-lg text-xs font-mono font-bold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-[#2f3260] shadow-sm">
+                      Ctrl + V
+                    </kbd>
+                  </div>
+                </div>
+
+                {/* Format info divider */}
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-gray-100 dark:bg-[#232650]" />
+                  <p className="text-[11px] text-gray-400 whitespace-nowrap px-1">Supports JPG · PNG · WEBP · Multiple images</p>
+                  <div className="h-px flex-1 bg-gray-100 dark:bg-[#232650]" />
                 </div>
               </div>
             </div>
           ) : (
-            /* Compact bar */
-            <div className="bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            /* ── Compact "images loaded" bar ── */
+            <div className="bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
               <input {...getInputProps()} />
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center flex-shrink-0">
-                  <ImageIcon size={16} className="text-[#6366F1]" />
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <ImageIcon size={15} className="text-white" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                     {totalCount} image{totalCount !== 1 ? 's' : ''} loaded
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
                     {pendingImages.length > 0
-                      ? `${pendingImages.length} ready · ${currentStyle?.label} style`
+                      ? `${pendingImages.length} queued · ${currentStyle?.label} · ${selectedPlatform === 'none' ? 'No platform' : currentPlatform?.label}`
                       : `${doneCount} prompt${doneCount !== 1 ? 's' : ''} generated`}
                   </p>
                 </div>
@@ -619,7 +771,7 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
               <div className="flex items-center gap-2 flex-shrink-0">
                 {pendingImages.length > 0 && (
                   <Button size="sm" loading={isGenerating} icon={<Zap size={13} />} onClick={generateAll}>
-                    {isGenerating ? 'Generating…' : `Generate ${pendingImages.length > 1 ? 'All' : 'Prompt'}`}
+                    {isGenerating ? 'Generating…' : `Generate${pendingImages.length > 1 ? ` All (${pendingImages.length})` : ''}`}
                   </Button>
                 )}
                 <button
@@ -634,20 +786,20 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
 
           {/* ── Pending thumbnail grid ───────────────────────────── */}
           {pendingImages.length > 0 && (
-            <div className="bg-white dark:bg-[#191c40] border border-gray-100 dark:border-[#232650] rounded-2xl p-4">
+            <div className="bg-white dark:bg-[#191c40] border border-gray-100 dark:border-[#232650] rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center shadow-sm">
                     <ImageIcon size={12} className="text-white" />
                   </div>
-                  <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
                     {pendingImages.length} file{pendingImages.length !== 1 ? 's' : ''} queued
                   </span>
-                  <span className="text-xs text-gray-400">ready to generate</span>
+                  <span className="text-xs text-gray-400">— ready to generate</span>
                 </div>
                 <button
                   onClick={() => setImages(prev => prev.filter(i => i.status !== 'pending'))}
-                  className="text-xs text-red-400 hover:text-red-600 transition-colors font-medium"
+                  className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
                 >
                   Clear pending
                 </button>
@@ -655,7 +807,7 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
               <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1.5">
                 {pendingImages.map(img => (
                   <div key={img.id} className="group relative">
-                    <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-[#0d1030] border border-gray-200 dark:border-[#232650] group-hover:border-[#A5B4FC] transition-colors">
+                    <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-[#0d1030] border border-gray-200 dark:border-[#232650] group-hover:border-[#A5B4FC] transition-colors shadow-sm">
                       <img src={img.url} alt={img.file.name} className="w-full h-full object-cover" />
                     </div>
                     <button
@@ -685,30 +837,40 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
           {processedImages.length > 0 && (
             <div className="space-y-4">
               {processedImages.map(img => {
-                const isGen  = img.status === 'generating';
-                const isDone = img.status === 'done';
+                const isGen   = img.status === 'generating';
+                const isDone  = img.status === 'done';
                 const isError = img.status === 'error';
                 const platform = PLATFORMS.find(p => p.id === (img.usedPlatform ?? selectedPlatform));
-                const style = PROMPT_STYLES.find(s => s.id === (img.usedStyle ?? promptStyle));
+                const style   = PROMPT_STYLES.find(s => s.id === (img.usedStyle ?? promptStyle));
 
                 return (
-                  <div key={img.id} className="bg-white dark:bg-[#191c40] border border-gray-100 dark:border-[#232650] rounded-2xl overflow-hidden shadow-sm">
+                  <div
+                    key={img.id}
+                    className="bg-white dark:bg-[#191c40] border border-gray-100 dark:border-[#232650] rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
+                  >
                     <div className="flex flex-col md:flex-row">
 
-                      {/* ── Left: image preview ── */}
-                      <div className="relative md:w-[40%] flex-shrink-0 bg-gray-100 dark:bg-[#0d1030] min-h-[240px] md:min-h-[300px] group">
-                        <img src={img.url} alt={img.file.name} className="absolute inset-0 w-full h-full object-contain p-3" />
+                      {/* ══ Left: image preview ══ */}
+                      <div className="relative md:w-[38%] flex-shrink-0 bg-gray-100 dark:bg-[#0d1030] min-h-[260px] md:min-h-[320px] group rounded-3xl md:rounded-r-none overflow-hidden">
 
+                        <img
+                          src={img.url}
+                          alt={img.file.name}
+                          className="absolute inset-0 w-full h-full object-contain p-3"
+                        />
+
+                        {/* Hover zoom overlay */}
                         <div
-                          className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center cursor-zoom-in"
+                          className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center cursor-zoom-in"
                           onClick={() => setLightboxSrc(img.url)}
                         >
-                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/95 dark:bg-[#191c40]/95 rounded-xl px-4 py-2 flex items-center gap-2 shadow-lg border border-white/20">
+                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/95 dark:bg-[#191c40]/95 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-lg border border-white/20">
                             <ZoomIn size={14} className="text-[#6366F1]" />
                             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Click to expand</span>
                           </div>
                         </div>
 
+                        {/* Status badge */}
                         <div className="absolute top-3 left-3">
                           {isGen && (
                             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full shadow-sm">
@@ -716,75 +878,130 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
                               Generating…
                             </span>
                           )}
-                          {isDone && <span className="text-[10px] font-semibold text-green-700 bg-green-100 border border-green-300 px-2.5 py-1 rounded-full shadow-sm">✓ Done</span>}
-                          {isError && <span className="text-[10px] font-semibold text-red-600 bg-red-100 border border-red-300 px-2.5 py-1 rounded-full shadow-sm">✗ Error</span>}
+                          {isDone && (
+                            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full shadow-sm">
+                              <Check size={9} /> Done
+                            </span>
+                          )}
+                          {isError && (
+                            <span className="text-[10px] font-semibold text-red-600 bg-red-100 border border-red-300 px-2.5 py-1 rounded-full shadow-sm">
+                              ✗ Error
+                            </span>
+                          )}
                         </div>
 
+                        {/* Action buttons on hover */}
                         <div className="absolute top-3 right-3 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setImages(prev => prev.filter(i => i.id !== img.id))} title="Remove"
-                            className="w-7 h-7 rounded-full bg-white/90 dark:bg-[#232650] hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors shadow-sm">
+                          <button
+                            onClick={() => setImages(prev => prev.filter(i => i.id !== img.id))}
+                            title="Remove"
+                            className="w-7 h-7 rounded-xl bg-white/90 dark:bg-[#191c40]/90 hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors shadow-md border border-white/20"
+                          >
                             <X size={12} />
                           </button>
-                          <button onClick={() => replaceImage(img.id)} title="Replace"
-                            className="w-7 h-7 rounded-full bg-white/90 dark:bg-[#232650] hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors shadow-sm">
+                          <button
+                            onClick={() => replaceImage(img.id)}
+                            title="Replace image"
+                            className="w-7 h-7 rounded-xl bg-white/90 dark:bg-[#191c40]/90 hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors shadow-md border border-white/20"
+                          >
                             <RotateCcw size={11} />
                           </button>
                         </div>
 
-                        <div className="absolute bottom-3 left-3 right-3">
-                          <div className="bg-black/55 backdrop-blur-sm rounded-lg px-2.5 py-1.5">
-                            <p className="text-[10px] text-white/90 font-medium truncate">{img.file.name}</p>
-                            <p className="text-[9px] text-white/55">{(img.file.size / 1024).toFixed(0)} KB</p>
-                          </div>
+                        {/* File info overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/65 via-black/25 to-transparent p-3 pt-8">
+                          <p className="text-white text-xs font-semibold truncate drop-shadow">{img.file.name}</p>
+                          <p className="text-white/60 text-[10px]">{(img.file.size / 1024).toFixed(0)} KB</p>
                         </div>
                       </div>
 
-                      {/* ── Right: prompt content ── */}
-                      <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
+                      {/* ══ Right: prompt content ══ */}
+                      <div className="flex-1 flex flex-col min-w-0 p-5 gap-4">
+
+                        {/* Tags row */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EEF2FF] dark:bg-[#6366F1]/15 text-[#6366F1] dark:text-[#A5B4FC] text-xs font-semibold border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
-                            {platform?.icon}&nbsp;{platform?.id === 'none' ? 'General' : platform?.label ?? 'General'}
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#EEF2FF] dark:bg-[#6366F1]/15 text-[#6366F1] dark:text-[#A5B4FC] text-[11px] font-semibold border border-[#A5B4FC]/30 dark:border-[#6366F1]/25">
+                            {platform?.icon}
+                            {platform?.id === 'none' ? 'General' : platform?.label ?? 'General'}
                           </span>
                           {style && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border" style={{ color: style.color, backgroundColor: style.color + '15', borderColor: style.color + '40' }}>
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border"
+                              style={{ color: style.color, backgroundColor: style.color + '15', borderColor: style.color + '35' }}
+                            >
                               {style.icon} {style.label}
                             </span>
                           )}
                           {img.usedRatio && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-[#232650] text-gray-600 dark:text-gray-400 text-xs font-medium">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-[#232650] text-gray-600 dark:text-gray-400 text-[11px] font-semibold border border-gray-200 dark:border-[#2f3260]">
                               {img.usedRatio}
                             </span>
                           )}
                         </div>
 
+                        {/* Prompt content area */}
                         {isGen ? (
-                          <div className="space-y-2 animate-pulse flex-1">
-                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-full" />
-                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-5/6" />
-                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-4/5" />
-                            <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded w-3/4" />
+                          <div className="flex-1 bg-gray-50 dark:bg-[#0d1030] rounded-2xl p-4 border border-gray-100 dark:border-[#232650]">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                              <span className="text-[11px] font-semibold text-amber-500">Generating prompt…</span>
+                            </div>
+                            <div className="space-y-2 animate-pulse">
+                              <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded-full w-full" />
+                              <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded-full w-[92%]" />
+                              <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded-full w-[85%]" />
+                              <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded-full w-[78%]" />
+                              <div className="h-2.5 bg-gray-200 dark:bg-[#232650] rounded-full w-[65%]" />
+                            </div>
                           </div>
                         ) : isError ? (
-                          <div className="flex items-start gap-2.5 p-3 bg-red-50 dark:bg-red-900/15 rounded-xl border border-red-200 dark:border-red-800/40 flex-1">
-                            <AlertCircle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-xs text-red-600 dark:text-red-400 leading-relaxed">{img.errorMsg}</p>
+                          <div className="flex-1 flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/15 rounded-2xl border border-red-200 dark:border-red-800/40">
+                            <div className="w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <AlertCircle size={15} className="text-red-500" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-0.5">Generation failed</p>
+                              <p className="text-xs text-red-600 dark:text-red-500 leading-relaxed">{img.errorMsg}</p>
+                            </div>
                           </div>
-                        ) : isDone ? (
-                          <div className="flex-1 bg-gray-50 dark:bg-[#0d1030] rounded-xl p-4 border border-gray-100 dark:border-[#232650]">
-                            <p className="text-xs text-gray-700 dark:text-gray-300 font-mono leading-relaxed break-words">{img.prompt}</p>
+                        ) : isDone && img.prompt ? (
+                          <div className="flex-1 relative group/prompt">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Generated Prompt</span>
+                              <span className="text-[10px] text-gray-400">{img.prompt.split(' ').length} words · {img.prompt.length} chars</span>
+                            </div>
+                            <div className="relative bg-gray-50 dark:bg-[#0d1030] rounded-2xl p-4 border border-gray-200 dark:border-[#232650]">
+                              <p className="text-sm text-gray-700 dark:text-gray-300 font-mono leading-relaxed break-words">
+                                {img.prompt}
+                              </p>
+                            </div>
                           </div>
                         ) : null}
 
-                        <div className="flex items-center gap-2 flex-wrap">
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
                           {isDone && (
-                            <Button size="xs" variant="secondary" icon={<Copy size={11} />}
-                              onClick={() => { navigator.clipboard.writeText(img.prompt ?? ''); toast.success('Prompt copied!'); }}>
-                              Copy Prompt
-                            </Button>
+                            <>
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(img.prompt ?? ''); toast.success('Prompt copied!'); }}
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6366F1] text-white text-xs font-semibold hover:bg-[#4F46E5] transition-colors shadow-sm shadow-[#6366F1]/25"
+                              >
+                                <Copy size={12} /> Copy Prompt
+                              </button>
+                              <button
+                                onClick={() => downloadPrompt(img)}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-[#232650] text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-[#2f3270] transition-colors border border-gray-200 dark:border-[#2f3260]"
+                              >
+                                <Download size={12} /> Download
+                              </button>
+                            </>
                           )}
-                          <Button size="xs" variant="ghost" icon={<RefreshCw size={11} />} onClick={() => regenerateOne(img.id)}>
-                            Regenerate
-                          </Button>
+                          <button
+                            onClick={() => regenerateOne(img.id)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-[#232650] text-gray-600 dark:text-gray-400 text-xs font-semibold hover:bg-[#EEF2FF] hover:text-[#6366F1] dark:hover:bg-[#6366F1]/15 dark:hover:text-[#A5B4FC] transition-colors border border-gray-200 dark:border-[#2f3260]"
+                          >
+                            <RefreshCw size={12} className={isGen ? 'animate-spin' : ''} /> Regenerate
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -796,16 +1013,15 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
 
           {/* ── Empty state ─────────────────────────────────────── */}
           {images.length === 0 && (
-            <div className="text-center py-14">
-              <div className="w-16 h-16 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/15 flex items-center justify-center mx-auto mb-4">
-                <ImageIcon size={28} className="text-[#6366F1]" />
+            <div className="text-center py-10">
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+                <Clipboard size={14} />
+                <span>
+                  Pro tip — press{' '}
+                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-[#232650] rounded text-xs font-mono border border-gray-200 dark:border-[#2f3260]">Ctrl+V</kbd>
+                  {' '}anywhere on this page to instantly paste a copied image
+                </span>
               </div>
-              <p className="font-semibold text-gray-900 dark:text-white mb-1">No images yet</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500">
-                Drop images above, or press{' '}
-                <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-[#232650] rounded text-xs font-mono border border-gray-200 dark:border-[#2f3260]">Ctrl+V</kbd>{' '}
-                to paste from clipboard
-              </p>
             </div>
           )}
         </div>
