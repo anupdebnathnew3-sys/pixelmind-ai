@@ -89,7 +89,6 @@ interface SidebarNavItemProps {
 
 const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level = 0 }) => {
   const location = useLocation();
-  const { toggleSidebarCollapse } = useStore();
   const [expanded, setExpanded] = useState(() =>
     item.children?.some(c => location.pathname.startsWith(c.path)) || location.pathname === item.path
   );
