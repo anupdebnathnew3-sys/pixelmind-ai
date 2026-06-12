@@ -50,6 +50,22 @@ import { LegalManagerPage } from './pages/admin/LegalManagerPage';
 import { SecuritySettingsPage } from './pages/admin/SecuritySettingsPage';
 import { GuestAlertManagerPage } from './pages/admin/GuestAlertManagerPage';
 import { CMSEditorPage } from './pages/admin/CMSEditorPage';
+import { HomepageManagerPage } from './pages/admin/HomepageManagerPage';
+import { ContactManagerPage } from './pages/admin/ContactManagerPage';
+import { FooterManagerPage } from './pages/admin/FooterManagerPage';
+import { TermsManagerPage } from './pages/admin/TermsManagerPage';
+import { PrivacyManagerPage } from './pages/admin/PrivacyManagerPage';
+import { MediaLibraryPage } from './pages/admin/MediaLibraryPage';
+import { BannerManagerPage } from './pages/admin/BannerManagerPage';
+import { NotificationsPage } from './pages/admin/NotificationsPage';
+import { SEOSettingsPage } from './pages/admin/SEOSettingsPage';
+import { CreditsSystemPage } from './pages/admin/CreditsSystemPage';
+import { ImageToPromptManagerPage } from './pages/admin/tools/ImageToPromptManagerPage';
+import { MetadataManagerPage } from './pages/admin/tools/MetadataManagerPage';
+import { ContentWriterManagerPage } from './pages/admin/tools/ContentWriterManagerPage';
+import { SloganManagerPage } from './pages/admin/tools/SloganManagerPage';
+import { SocialManagerPage } from './pages/admin/tools/SocialManagerPage';
+import { WordCounterManagerPage } from './pages/admin/tools/WordCounterManagerPage';
 import { ThemeProvider } from './components/providers/ThemeProvider';
 import { TermsPage } from './pages/public/TermsPage';
 import { PrivacyPage } from './pages/public/PrivacyPage';
@@ -188,6 +204,28 @@ export default function App() {
         <Route path="/admin/security" element={<SecuritySettingsPage />} />
         <Route path="/admin/guest-alerts" element={<GuestAlertManagerPage />} />
         <Route path="/admin/cms" element={<CMSEditorPage />} />
+
+        {/* Admin — Website Management */}
+        <Route path="/admin/homepage" element={<HomepageManagerPage />} />
+        <Route path="/admin/contact-manager" element={<ContactManagerPage />} />
+        <Route path="/admin/footer" element={<FooterManagerPage />} />
+        <Route path="/admin/terms" element={<TermsManagerPage />} />
+        <Route path="/admin/privacy" element={<PrivacyManagerPage />} />
+
+        {/* Admin — Tool Management */}
+        <Route path="/admin/tool/image-to-prompt" element={<ImageToPromptManagerPage />} />
+        <Route path="/admin/tool/metadata" element={<MetadataManagerPage />} />
+        <Route path="/admin/tool/content-writer" element={<ContentWriterManagerPage />} />
+        <Route path="/admin/tool/slogan" element={<SloganManagerPage />} />
+        <Route path="/admin/tool/social" element={<SocialManagerPage />} />
+        <Route path="/admin/tool/word-counter" element={<WordCounterManagerPage />} />
+
+        {/* Admin — System */}
+        <Route path="/admin/media" element={<MediaLibraryPage />} />
+        <Route path="/admin/banners" element={<BannerManagerPage />} />
+        <Route path="/admin/notifications" element={<NotificationsPage />} />
+        <Route path="/admin/seo" element={<SEOSettingsPage />} />
+        <Route path="/admin/credits-system" element={<CreditsSystemPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -7,8 +7,10 @@ import {
   LayoutDashboard, Wrench, Image, FileText, Calendar, Clock,
   Settings, CreditCard, User, LogOut, ChevronLeft,
   ChevronRight, Zap, MessageSquare, Hash, ImagePlus, ChevronDown,
-  Shield, Bot, BarChart3, Globe, Calculator, Tag, Wallet, DollarSign,
-  Lock, Navigation, Palette, Scale, Bell
+  Shield, Bot, BarChart3, Globe, Calculator, DollarSign,
+  Lock, Navigation, Palette, Scale, Home, Mail, Users,
+  Image as ImageIcon, BellRing, Search, Database,
+  PanelTop, Megaphone
 } from 'lucide-react';
 
 interface NavItem {
@@ -28,7 +30,7 @@ const navItems: NavItem[] = [
       { id: 'metadata', label: 'AI Metadata Generator', icon: <Image size={16} />, path: '/tools/metadata', badge: 'Core' },
       { id: 'img2prompt', label: 'Image To Prompt', icon: <ImagePlus size={16} />, path: '/tools/image-to-prompt' },
       { id: 'content', label: 'AI Content Writer', icon: <FileText size={16} />, path: '/tools/content-writer' },
-{ id: 'scheduler', label: 'Social Media', icon: <Globe size={16} />, path: '/tools/social-scheduler' },
+      { id: 'scheduler', label: 'Social Media', icon: <Globe size={16} />, path: '/tools/social-scheduler' },
       { id: 'wordcount', label: 'Word Counter', icon: <Hash size={16} />, path: '/tools/word-counter' },
       { id: 'slogan', label: 'Slogan Generator', icon: <MessageSquare size={16} />, path: '/tools/slogan-generator' },
       { id: 'age-calc', label: 'Age Calculator', icon: <Calculator size={16} />, path: '/tools/age-calculator' },
@@ -43,42 +45,103 @@ const navItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
-  { id: 'admin-dashboard', label: 'Admin Dashboard', icon: <BarChart3 size={18} />, path: '/admin' },
-  { id: 'user-management', label: 'User Management', icon: <User size={18} />, path: '/admin/users' },
-  { id: 'api-management', label: 'API Management', icon: <Zap size={18} />, path: '/admin/apis' },
-  { id: 'prompt-management', label: 'Prompt Management', icon: <MessageSquare size={18} />, path: '/admin/prompts' },
-  { id: 'credit-management', label: 'Credit Management', icon: <BarChart3 size={18} />, path: '/admin/credits' },
+  { id: 'admin-dashboard', label: 'Dashboard', icon: <BarChart3 size={18} />, path: '/admin' },
+
+  // ── Website Management ──
   {
-    id: 'billing-group', label: 'Billing & Plans', icon: <CreditCard size={18} />, path: '/admin/billing-group',
+    id: 'website-group', label: 'Website Management', icon: <Globe size={18} />, path: '/admin/website',
     children: [
-      { id: 'pricing-manager', label: 'Pricing Manager', icon: <DollarSign size={16} />, path: '/admin/pricing' },
-      { id: 'discount-manager', label: 'Discounts', icon: <Tag size={16} />, path: '/admin/discounts' },
-      { id: 'billing-manager', label: 'Billing Manager', icon: <Wallet size={16} />, path: '/admin/billing-manager' },
-      { id: 'payment-gateway', label: 'Payment Gateway', icon: <CreditCard size={16} />, path: '/admin/payment-gateway' },
-      { id: 'feature-access', label: 'Feature Access', icon: <Lock size={16} />, path: '/admin/feature-access' },
-      { id: 'admin-subscriptions', label: 'Subscriptions', icon: <BarChart3 size={16} />, path: '/admin/subscriptions' },
+      { id: 'homepage-manager', label: 'Homepage',          icon: <Home size={16} />,     path: '/admin/homepage' },
+      { id: 'about-manager',    label: 'About Page',        icon: <User size={16} />,     path: '/admin/about' },
+      { id: 'contact-manager',  label: 'Contact Page',      icon: <Mail size={16} />,     path: '/admin/contact-manager' },
+      { id: 'pricing-page',     label: 'Pricing Page',      icon: <DollarSign size={16} />, path: '/admin/pricing' },
+      { id: 'terms-manager',    label: 'Terms & Conditions',icon: <Scale size={16} />,    path: '/admin/terms' },
+      { id: 'privacy-manager',  label: 'Privacy Policy',    icon: <Shield size={16} />,   path: '/admin/privacy' },
+      { id: 'footer-manager',   label: 'Footer',            icon: <PanelTop size={16} />, path: '/admin/footer' },
     ],
   },
+
+  // ── Tool Management ──
   {
-    id: 'design-group', label: 'Design & Content', icon: <Palette size={18} />, path: '/admin/design-group',
+    id: 'tools-group', label: 'Tool Management', icon: <Wrench size={18} />, path: '/admin/tools',
     children: [
-      { id: 'cms-editor', label: 'CMS Editor', icon: <Globe size={16} />, path: '/admin/cms', badge: 'New' },
-      { id: 'navigation-manager', label: 'Navigation Manager', icon: <Navigation size={16} />, path: '/admin/navigation' },
-      { id: 'theme-manager', label: 'Theme Manager', icon: <Palette size={16} />, path: '/admin/theme' },
-      { id: 'content-management', label: 'Content Management', icon: <FileText size={16} />, path: '/admin/content' },
-      { id: 'about-manager', label: 'About Me Manager', icon: <User size={16} />, path: '/admin/about' },
+      { id: 'tool-img2prompt', label: 'Image to Prompt',    icon: <ImagePlus size={16} />,  path: '/admin/tool/image-to-prompt' },
+      { id: 'tool-metadata',   label: 'AI Metadata',        icon: <ImageIcon size={16} />,  path: '/admin/tool/metadata' },
+      { id: 'tool-content',    label: 'Content Writer',     icon: <FileText size={16} />,   path: '/admin/tool/content-writer' },
+      { id: 'tool-slogan',     label: 'Slogan Generator',   icon: <MessageSquare size={16} />, path: '/admin/tool/slogan' },
+      { id: 'tool-social',     label: 'Social Scheduler',   icon: <Globe size={16} />,      path: '/admin/tool/social' },
+      { id: 'tool-word',       label: 'Word Counter',       icon: <Hash size={16} />,       path: '/admin/tool/word-counter' },
     ],
   },
+
+  // ── User Management ──
   {
-    id: 'legal-security-group', label: 'Legal & Security', icon: <Shield size={18} />, path: '/admin/legal-security-group',
+    id: 'users-group', label: 'User Management', icon: <Users size={18} />, path: '/admin/users',
     children: [
-      { id: 'legal-manager', label: 'Legal Manager', icon: <Scale size={16} />, path: '/admin/legal' },
+      { id: 'all-users',     label: 'All Users',       icon: <Users size={16} />,     path: '/admin/users' },
+      { id: 'guest-users',   label: 'Guest Management',icon: <User size={16} />,      path: '/admin/guest-alerts' },
+      { id: 'subscriptions', label: 'Subscriptions',   icon: <CreditCard size={16} />,path: '/admin/subscriptions' },
+      { id: 'credits-mgmt',  label: 'Credits',         icon: <Zap size={16} />,       path: '/admin/credits' },
+    ],
+  },
+
+  // ── Payment & Billing ──
+  {
+    id: 'billing-group', label: 'Payment & Billing', icon: <CreditCard size={18} />, path: '/admin/billing-group',
+    children: [
+      { id: 'payment-methods', label: 'Payment Methods', icon: <CreditCard size={16} />, path: '/admin/payment-gateway' },
+      { id: 'transactions',    label: 'Transactions',    icon: <BarChart3 size={16} />,  path: '/admin/billing-manager' },
+      { id: 'billing-config',  label: 'Billing Settings',icon: <Settings size={16} />,  path: '/admin/discounts' },
+      { id: 'pricing-plans',   label: 'Pricing Plans',   icon: <DollarSign size={16} />, path: '/admin/pricing' },
+      { id: 'feature-access',  label: 'Feature Access',  icon: <Lock size={16} />,       path: '/admin/feature-access' },
+    ],
+  },
+
+  // ── Theme & Design ──
+  {
+    id: 'design-group', label: 'Theme & Design', icon: <Palette size={18} />, path: '/admin/design-group',
+    children: [
+      { id: 'theme-manager',  label: 'Theme Manager',  icon: <Palette size={16} />,    path: '/admin/theme' },
+      { id: 'nav-manager',    label: 'Navigation Bar', icon: <Navigation size={16} />, path: '/admin/navigation' },
+      { id: 'cms-editor',     label: 'CMS Editor',     icon: <Globe size={16} />,      path: '/admin/cms', badge: 'New' },
+      { id: 'banner-manager', label: 'Banner Manager', icon: <Megaphone size={16} />,  path: '/admin/banners' },
+    ],
+  },
+
+  // ── Standalone pages ──
+  { id: 'media-library',  label: 'Media Library',  icon: <Database size={18} />,  path: '/admin/media' },
+  { id: 'credits-system', label: 'Credits System', icon: <Zap size={18} />,       path: '/admin/credits-system' },
+
+  // ── API Management ──
+  {
+    id: 'api-group', label: 'API Management', icon: <Zap size={18} />, path: '/admin/api-group',
+    children: [
+      { id: 'api-keys',      label: 'API Keys',         icon: <Zap size={16} />,           path: '/admin/apis' },
+      { id: 'prompt-mgmt',   label: 'Prompt Templates', icon: <MessageSquare size={16} />, path: '/admin/prompts' },
+    ],
+  },
+
+  // ── Security Center ──
+  {
+    id: 'security-group', label: 'Security Center', icon: <Shield size={18} />, path: '/admin/security-group',
+    children: [
       { id: 'security-settings', label: 'Security Settings', icon: <Shield size={16} />, path: '/admin/security' },
-      { id: 'guest-alerts', label: 'Guest Alert Manager', icon: <Bell size={16} />, path: '/admin/guest-alerts' },
+      { id: 'legal-docs',        label: 'Legal Documents',   icon: <Scale size={16} />,  path: '/admin/legal' },
     ],
   },
-  { id: 'global-settings', label: 'Global Settings', icon: <Settings size={18} />, path: '/admin/settings' },
-  { id: 'maintenance', label: 'Maintenance Mode', icon: <Shield size={18} />, path: '/admin/maintenance' },
+
+  // ── Notifications ──
+  { id: 'notifications', label: 'Notifications', icon: <BellRing size={18} />, path: '/admin/notifications' },
+
+  // ── Advanced Settings ──
+  {
+    id: 'advanced-group', label: 'Advanced Settings', icon: <Settings size={18} />, path: '/admin/advanced',
+    children: [
+      { id: 'global-settings', label: 'Global Settings', icon: <Settings size={16} />, path: '/admin/settings' },
+      { id: 'seo-settings',    label: 'SEO Settings',    icon: <Search size={16} />,   path: '/admin/seo' },
+      { id: 'maintenance',     label: 'Maintenance',     icon: <Shield size={16} />,   path: '/admin/maintenance' },
+    ],
+  },
 ];
 
 interface SidebarNavItemProps {
