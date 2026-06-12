@@ -11,7 +11,7 @@ import type { APIKey } from '../../types';
 import {
   Plus, Zap, Trash2, Edit3, CheckCircle, XCircle, RefreshCw,
   Eye, EyeOff, Star, AlertTriangle, Crown, Key, Shield,
-  Cpu, Settings2
+  Cpu, Settings2, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -106,6 +106,17 @@ const PROVIDER_MODELS: Record<string, { value: string; label: string; vision: bo
     { value: 'mistralai/Mistral-7B-Instruct-v0.3',       label: 'Mistral 7B (text only)',    vision: false },
   ],
   custom: [],
+};
+
+const PROVIDER_API_URLS: Record<string, { url: string; label: string }> = {
+  openai:      { url: 'https://platform.openai.com/api-keys',           label: 'OpenAI Platform' },
+  gemini:      { url: 'https://aistudio.google.com/app/apikey',         label: 'Google AI Studio' },
+  claude:      { url: 'https://console.anthropic.com/account/keys',     label: 'Anthropic Console' },
+  groq:        { url: 'https://console.groq.com/keys',                  label: 'Groq Console' },
+  openrouter:  { url: 'https://openrouter.ai/keys',                     label: 'OpenRouter' },
+  mistral:     { url: 'https://console.mistral.ai/api-keys/',           label: 'Mistral Console' },
+  ollama:      { url: 'https://ollama.com/download',                    label: 'Download Ollama' },
+  huggingface: { url: 'https://huggingface.co/settings/tokens',         label: 'HuggingFace Tokens' },
 };
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -537,6 +548,18 @@ export const AISettingsPage: React.FC<AISettingsPageProps> = ({ guestAllowed = f
                         {key.isEnabled ? 'Enabled' : 'Disabled'}
                       </button>
 
+                      {/* Get API Key link */}
+                      {PROVIDER_API_URLS[key.provider] && (
+                        <a
+                          href={PROVIDER_API_URLS[key.provider].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-[#131635] border border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/40 hover:text-[#6366F1] transition-all"
+                        >
+                          <ExternalLink size={11} /> Get API Key
+                        </a>
+                      )}
+
                       {/* Spacer */}
                       <div className="flex-1" />
 
@@ -603,12 +626,25 @@ export const AISettingsPage: React.FC<AISettingsPageProps> = ({ guestAllowed = f
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             />
-            <Select
-              label="Provider"
-              options={AI_PROVIDERS}
-              value={form.provider}
-              onChange={e => handleProviderChange(e.target.value)}
-            />
+            <div>
+              <Select
+                label="Provider"
+                options={AI_PROVIDERS}
+                value={form.provider}
+                onChange={e => handleProviderChange(e.target.value)}
+              />
+              {PROVIDER_API_URLS[form.provider] && (
+                <a
+                  href={PROVIDER_API_URLS[form.provider].url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-[#6366F1] hover:text-[#4F46E5] hover:underline transition-colors"
+                >
+                  <ExternalLink size={11} />
+                  Get API Key → {PROVIDER_API_URLS[form.provider].label}
+                </a>
+              )}
+            </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1.5">
                 API Key
