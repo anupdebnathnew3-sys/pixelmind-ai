@@ -8,7 +8,7 @@ import { usePromptStore, buildImageToPromptPrompt } from '../../store/usePromptS
 import { callAI, imageToBase64ForAI } from '../../services/aiService';
 import {
   Upload, Copy, RefreshCw, Zap, X, AlertCircle, Trash2,
-  Image as ImageIcon, ZoomIn, Clipboard, ChevronDown,
+  Image as ImageIcon, ZoomIn, Clipboard,
   Plus, RotateCcw, Check, Wand2, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -105,21 +105,6 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
   const [promptStyle, setPromptStyle] = useState('detailed');
   const [isGenerating, setIsGenerating] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [platformDropdownOpen, setPlatformDropdownOpen] = useState(false);
-
-  const platformDropdownRef = useRef<HTMLDivElement>(null);
-
-  // ── Close dropdown on outside click ───────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (platformDropdownRef.current && !platformDropdownRef.current.contains(e.target as Node)) {
-        setPlatformDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
   // ── Clipboard paste ────────────────────────────────────────────────────────
   const addFiles = useCallback((files: File[]) => {
     const newImgs: UploadedImage[] = files
@@ -484,71 +469,28 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
                 <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
                   AI Platform
                 </p>
-                <div className="relative" ref={platformDropdownRef}>
-                  <button
-                    onClick={() => setPlatformDropdownOpen(!platformDropdownOpen)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-all ${
-                      selectedPlatform !== 'none'
-                        ? 'border-[#6366F1] bg-[#6366F1] shadow-sm shadow-[#6366F1]/30'
-                        : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 bg-white dark:bg-[#191c40]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-base w-6 text-center flex-shrink-0">{currentPlatform?.icon}</span>
-                      <div className="text-left">
-                        <p className={`text-xs font-bold leading-tight ${selectedPlatform !== 'none' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                          {selectedPlatform === 'none' ? 'No Platform' : currentPlatform?.label}
-                        </p>
-                        <p className={`text-[10px] leading-tight ${selectedPlatform !== 'none' ? 'text-white/65' : 'text-gray-400'}`}>
-                          {currentPlatform?.desc}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronDown
-                      size={14}
-                      className={`transition-transform flex-shrink-0 ${platformDropdownOpen ? 'rotate-180' : ''} ${selectedPlatform !== 'none' ? 'text-white/70' : 'text-gray-400'}`}
-                    />
-                  </button>
-
-                  {platformDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden">
-                      <div className="py-1.5">
-                        {PLATFORMS.map((p, idx) => (
-                          <React.Fragment key={p.id}>
-                            {idx === 1 && <div className="h-px bg-gray-100 dark:bg-[#232650] mx-3 my-1" />}
-                            <button
-                              onClick={() => { setSelectedPlatform(p.id); setPlatformDropdownOpen(false); }}
-                              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                                selectedPlatform === p.id
-                                  ? 'bg-[#EEF2FF] dark:bg-[#6366F1]/15'
-                                  : 'hover:bg-gray-50 dark:hover:bg-[#232650]/60'
-                              }`}
-                            >
-                              <span className="text-base w-6 text-center flex-shrink-0">{p.icon}</span>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-xs font-bold leading-tight ${selectedPlatform === p.id ? 'text-[#6366F1] dark:text-[#A5B4FC]' : 'text-gray-900 dark:text-white'}`}>
-                                  {p.label}
-                                </p>
-                                <p className="text-[10px] text-gray-400 leading-tight">{p.desc}</p>
-                              </div>
-                              {selectedPlatform === p.id && (
-                                <span className="w-5 h-5 rounded-full bg-[#6366F1] flex items-center justify-center flex-shrink-0">
-                                  <Check size={10} className="text-white" />
-                                </span>
-                              )}
-                            </button>
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="grid grid-cols-2 gap-1.5">
+                  {PLATFORMS.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedPlatform(p.id)}
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border-2 transition-all ${
+                        selectedPlatform === p.id
+                          ? 'border-[#6366F1] bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/25'
+                          : 'border-gray-100 dark:border-[#232650] hover:border-[#6366F1]/40 hover:bg-[#EEF2FF]/50 dark:hover:bg-[#6366F1]/8 bg-gray-50/50 dark:bg-[#0d1030]/40'
+                      }`}
+                    >
+                      <span className="text-base flex-shrink-0 leading-none">{p.icon}</span>
+                      <span className={`text-[11px] font-semibold truncate ${
+                        selectedPlatform === p.id ? 'text-white' : 'text-gray-800 dark:text-gray-200'
+                      }`}>{p.label}</span>
+                    </button>
+                  ))}
                 </div>
-
-                {currentPlatform && selectedPlatform !== 'none' && (
-                  <div className="mt-2.5 flex items-start gap-2 p-2.5 text-[10px] bg-[#EEF2FF] dark:bg-[#6366F1]/10 rounded-xl border border-[#A5B4FC]/30 dark:border-[#6366F1]/20">
-                    <span className="flex-shrink-0 mt-0.5">{currentPlatform.icon}</span>
-                    <span className="text-gray-600 dark:text-gray-400 leading-relaxed">{currentPlatform.hint}</span>
-                  </div>
+                {selectedPlatform !== 'none' && currentPlatform && (
+                  <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                    {currentPlatform.hint}
+                  </p>
                 )}
               </div>
 
@@ -557,12 +499,12 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
                 <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
                   Aspect Ratio
                 </p>
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {ASPECT_RATIOS.map(r => (
                     <button
                       key={r}
                       onClick={() => setAspectRatio(r)}
-                      className={`py-1.5 rounded-lg text-[11px] font-semibold text-center transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                         aspectRatio === r
                           ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
                           : 'bg-gray-100 dark:bg-[#0d1030] text-gray-600 dark:text-gray-400 hover:bg-[#EEF2FF] hover:text-[#6366F1] dark:hover:bg-[#6366F1]/10 dark:hover:text-[#A5B4FC] border border-gray-200 dark:border-[#232650]'
@@ -669,100 +611,33 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
           {images.length === 0 ? (
             <div
               {...getRootProps()}
-              className={`relative overflow-hidden border-2 border-dashed rounded-3xl cursor-pointer transition-all duration-300 ${
+              className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 ${
                 isDragActive
-                  ? 'border-[#6366F1] bg-[#6366F1]/5 dark:bg-[#6366F1]/10 scale-[1.005] shadow-xl shadow-[#6366F1]/10'
-                  : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 hover:bg-gray-50/50 dark:hover:bg-[#6366F1]/3 bg-white dark:bg-[#191c40]'
+                  ? 'border-[#6366F1] bg-[#EEF2FF] dark:bg-[#6366F1]/10 scale-[1.01]'
+                  : 'border-gray-200 dark:border-[#232650] hover:border-[#6366F1] hover:bg-[#EEF2FF]/40 dark:hover:bg-[#6366F1]/5 bg-white dark:bg-[#191c40]'
               }`}
             >
               <input {...getInputProps()} />
-
-              {/* Drag-active overlay */}
-              {isDragActive && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#6366F1]/5 dark:bg-[#6366F1]/10 backdrop-blur-[2px]">
-                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center shadow-2xl shadow-[#6366F1]/40 mb-4 animate-bounce">
-                    <Upload size={32} className="text-white" />
-                  </div>
-                  <p className="text-xl font-bold text-[#6366F1] dark:text-[#A5B4FC]">Release to upload!</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Drop your images here</p>
+              <div className="flex flex-col items-center gap-4">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                  isDragActive ? 'bg-[#6366F1] scale-110 shadow-lg shadow-[#6366F1]/30' : 'bg-[#EEF2FF] dark:bg-[#6366F1]/20'
+                }`}>
+                  <Upload size={26} className={isDragActive ? 'text-white' : 'text-[#6366F1]'} />
                 </div>
-              )}
-
-              {/* Normal state content */}
-              <div className="px-8 pt-10 pb-8">
-                {/* Hero icon + text */}
-                <div className="text-center mb-8">
-                  <div className="relative inline-flex mb-4">
-                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] flex items-center justify-center shadow-xl shadow-[#6366F1]/25">
-                      <ImageIcon size={32} className="text-white" />
-                    </div>
-                    <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-xl bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center shadow-md border-2 border-white dark:border-[#191c40]">
-                      <Wand2 size={12} className="text-white" />
-                    </div>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Upload Your Images</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                    Choose any method below — we'll transform your images into ready-to-use AI prompts
+                <div>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {isDragActive ? 'Drop your images here!' : 'Drop images or click to upload'}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    JPG, PNG, WEBP — multiple images supported
                   </p>
                 </div>
-
-                {/* Three method cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
-
-                  {/* Browse */}
-                  <div className="group flex flex-col items-center gap-3 p-5 rounded-2xl bg-gray-50 dark:bg-[#0d1030] border border-gray-200 dark:border-[#232650] hover:border-[#6366F1]/50 hover:bg-[#EEF2FF]/60 dark:hover:bg-[#6366F1]/8 transition-all">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 group-hover:bg-[#6366F1] flex items-center justify-center transition-all group-hover:shadow-lg group-hover:shadow-[#6366F1]/30">
-                      <Upload size={20} className="text-[#6366F1] group-hover:text-white transition-colors" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Browse Files</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Click anywhere to open file browser</p>
-                    </div>
-                    <div className="flex gap-1 flex-wrap justify-center">
-                      {['JPG', 'PNG', 'WEBP'].map(f => (
-                        <span key={f} className="px-1.5 py-0.5 bg-gray-200 dark:bg-[#232650] text-gray-500 dark:text-gray-400 text-[9px] font-bold rounded">{f}</span>
-                      ))}
-                    </div>
+                <div className="flex items-center gap-3 flex-wrap justify-center">
+                  <Button size="sm" variant="secondary">Browse Files</Button>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    <Clipboard size={12} />
+                    <span>or press <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-[#232650] rounded text-[10px] font-mono border border-gray-200 dark:border-[#2f3260]">Ctrl+V</kbd> to paste</span>
                   </div>
-
-                  {/* Drag & Drop */}
-                  <div className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-gray-50 dark:bg-[#0d1030] border-2 border-dashed border-gray-200 dark:border-[#232650] transition-all">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Drag & Drop</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Drop images directly onto this area</p>
-                    </div>
-                    <span className="text-[10px] text-[#6366F1] dark:text-[#A5B4FC] font-semibold px-2.5 py-1 rounded-full bg-[#EEF2FF] dark:bg-[#6366F1]/15 border border-[#A5B4FC]/30">
-                      Multiple files OK
-                    </span>
-                  </div>
-
-                  {/* Paste */}
-                  <div className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-gray-50 dark:bg-[#0d1030] border border-gray-200 dark:border-[#232650] transition-all">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center">
-                      <Clipboard size={20} className="text-[#6366F1]" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Paste Image</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">Copy any image and press</p>
-                    </div>
-                    <kbd className="px-3 py-1 bg-white dark:bg-[#191c40] rounded-lg text-xs font-mono font-bold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-[#2f3260] shadow-sm">
-                      Ctrl + V
-                    </kbd>
-                  </div>
-                </div>
-
-                {/* Format info divider */}
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-gray-100 dark:bg-[#232650]" />
-                  <p className="text-[11px] text-gray-400 whitespace-nowrap px-1">Supports JPG · PNG · WEBP · Multiple images</p>
-                  <div className="h-px flex-1 bg-gray-100 dark:bg-[#232650]" />
                 </div>
               </div>
             </div>
