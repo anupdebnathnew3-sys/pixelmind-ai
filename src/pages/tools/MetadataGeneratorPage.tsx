@@ -284,7 +284,9 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const [exportOpen, setExportOpen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [categoryDropOpen, setCategoryDropOpen] = useState<string | null>(null); // imageId
   const exportRef = useRef<HTMLDivElement>(null);
+  const categoryDropRef = useRef<HTMLDivElement>(null);
   const wasGenerating = useRef(false);
   const [settings, setSettings] = useState<MetadataSettings>({
     titleLength: 120,
@@ -305,6 +307,9 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     const handleClickOutside = (e: MouseEvent) => {
       if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
         setExportOpen(false);
+      }
+      if (categoryDropRef.current && !categoryDropRef.current.contains(e.target as Node)) {
+        setCategoryDropOpen(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -1089,16 +1094,36 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                             </span>
                             <div className="flex items-center gap-2">
                               {isDone && (
-                                <select
-                                  value={img.category || ''}
-                                  onChange={e => setImages(prev => prev.map(i => i.id === img.id ? { ...i, category: e.target.value } : i))}
-                                  className="text-[10px] px-2 py-0.5 rounded-full bg-[#EEF2FF] dark:bg-[#6366F1]/15 text-[#6366F1] dark:text-[#A5B4FC] font-medium border border-[#A5B4FC]/30 cursor-pointer outline-none max-w-[140px] truncate"
-                                >
-                                  <option value="">— Category —</option>
-                                  {CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                  ))}
-                                </select>
+                                <div className="relative" ref={categoryDropOpen === img.id ? categoryDropRef : null}>
+                                  <button
+                                    onClick={() => setCategoryDropOpen(categoryDropOpen === img.id ? null : img.id)}
+                                    className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[#EEF2FF] dark:bg-[#6366F1]/15 text-[#6366F1] dark:text-[#A5B4FC] font-medium border border-[#A5B4FC]/30 cursor-pointer max-w-[140px] hover:bg-[#6366F1]/20 transition-colors"
+                                  >
+                                    <span className="truncate max-w-[110px]">{img.category || '— Category —'}</span>
+                                    <ChevronDown size={9} className={`flex-shrink-0 transition-transform ${categoryDropOpen === img.id ? 'rotate-180' : ''}`} />
+                                  </button>
+                                  {categoryDropOpen === img.id && (
+                                    <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-white dark:bg-[#1e2147] border border-gray-200 dark:border-[#2e3270] rounded-xl shadow-2xl overflow-hidden">
+                                      <div className="max-h-52 overflow-y-auto py-1">
+                                        <button
+                                          onClick={() => { setImages(prev => prev.map(i => i.id === img.id ? { ...i, category: '' } : i)); setCategoryDropOpen(null); }}
+                                          className="w-full text-left px-3 py-1.5 text-[11px] text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-[#232650] transition-colors"
+                                        >
+                                          — Clear category —
+                                        </button>
+                                        {CATEGORIES.map(cat => (
+                                          <button
+                                            key={cat}
+                                            onClick={() => { setImages(prev => prev.map(i => i.id === img.id ? { ...i, category: cat } : i)); setCategoryDropOpen(null); }}
+                                            className={`w-full text-left px-3 py-1.5 text-[11px] font-medium transition-colors ${img.category === cat ? 'bg-[#6366F1] text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-[#EEF2FF] dark:hover:bg-[#232650]'}`}
+                                          >
+                                            {cat}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                               {img.title && (
                                 <button onClick={() => { navigator.clipboard.writeText(applyAffixes(img.title || '')); toast.success('Title copied!'); }}
