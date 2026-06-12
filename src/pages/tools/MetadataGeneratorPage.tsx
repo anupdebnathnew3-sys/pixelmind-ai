@@ -7,7 +7,7 @@ import { Toggle } from '../../components/ui/Card';
 import { useStore } from '../../store/useStore';
 import { useGuestStore } from '../../store/useGuestStore';
 import { usePromptStore, buildMetadataPrompt } from '../../store/usePromptStore';
-import { callAI, imageToBase64ForAI, extractJSON, estimateBatchCost, MODEL_TIERS, MODEL_COST_PER_IMAGE } from '../../services/aiService';
+import { callAI, imageToBase64ForAI, extractJSON, estimateBatchCost, MODEL_COST_PER_IMAGE } from '../../services/aiService';
 import {
   Upload, Image, Download, RefreshCw, Settings, ChevronDown,
   ChevronUp, Trash2, Copy, X, AlertCircle, Type, AlignLeft, Hash, Zap,
@@ -279,7 +279,6 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const getCacheKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
   const activeKey = apiKeys.find(k => k.isDefault && k.isEnabled) ?? apiKeys.find(k => k.isEnabled);
   const activeModel = activeKey?.modelName ?? 'gpt-4o-mini';
-  const tierInfo = MODEL_TIERS[activeModel];
   const [images, setImages] = useState<ImageFile[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState('Adobe Stock');
   const [isGenerating, setIsGenerating] = useState(false);
