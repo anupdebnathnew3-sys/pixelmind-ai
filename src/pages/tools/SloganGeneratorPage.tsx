@@ -9,6 +9,7 @@ import { callAI } from '../../services/aiService';
 import { Zap, Copy, RefreshCw, MessageSquare, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
 
 const STYLES = [
   { id: 'professional', label: 'Professional', emoji: '💼', desc: 'Corporate, trustworthy' },
@@ -129,6 +130,7 @@ No explanations, no headers, just the numbered list.`;
         <div className="grid lg:grid-cols-5 gap-5">
           {/* Controls */}
           <div className="lg:col-span-2 space-y-4">
+            <InlineApiKeySetup />
             <Card>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Brand Details</h3>
               <div className="space-y-3">

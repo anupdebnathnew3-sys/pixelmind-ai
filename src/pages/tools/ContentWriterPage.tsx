@@ -8,6 +8,7 @@ import { usePromptStore, buildContentPrompt } from '../../store/usePromptStore';
 import { callAI } from '../../services/aiService';
 import { FileText, Zap, Copy, Download, AlertCircle, X, Eye, Edit3 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
 
 // ─── Inline Markdown Renderer ─────────────────────────────────────────────────
 
@@ -198,6 +199,8 @@ export const ContentWriterPage: React.FC<{ guestAllowed?: boolean }> = ({ guestA
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Settings */}
+          <div className="space-y-4">
+          <InlineApiKeySetup />
           <Card>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Content Settings</h3>
             <div className="space-y-4">
@@ -249,6 +252,7 @@ export const ContentWriterPage: React.FC<{ guestAllowed?: boolean }> = ({ guestA
               <p className="text-[10px] text-center text-gray-400">5 credits per generation</p>
             </div>
           </Card>
+          </div>
 
           {/* Output */}
           <div className="lg:col-span-2 space-y-4">
