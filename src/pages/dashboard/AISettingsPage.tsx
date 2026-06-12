@@ -109,8 +109,8 @@ const PROVIDER_MODELS: Record<string, { value: string; label: string; vision: bo
 };
 
 const DEFAULT_MODELS: Record<string, string> = {
-  openai: 'gpt-4o', gemini: 'gemini-2.0-flash', claude: 'claude-sonnet-4-6',
-  groq: 'meta-llama/llama-4-scout-17b-16e-instruct', openrouter: 'openai/gpt-4o',
+  openai: 'gpt-4o', gemini: 'gemini-2.5-pro-preview-05-06', claude: 'claude-opus-4-8',
+  groq: 'meta-llama/llama-4-maverick-17b-128e-instruct', openrouter: 'openai/gpt-4.1',
   mistral: 'pixtral-large-latest', ollama: 'llava',
   huggingface: 'meta-llama/Llama-3.2-11B-Vision-Instruct', custom: '',
 };
