@@ -7,11 +7,11 @@ import { Toggle } from '../../components/ui/Card';
 import { useStore } from '../../store/useStore';
 import { useGuestStore } from '../../store/useGuestStore';
 import { usePromptStore, buildMetadataPrompt } from '../../store/usePromptStore';
-import { callAI, imageToBase64ForAI, extractJSON } from '../../services/aiService';
+import { callAI, imageToBase64ForAI, extractJSON, estimateBatchCost, MODEL_TIERS, MODEL_COST_PER_IMAGE } from '../../services/aiService';
 import {
   Upload, Image, Download, RefreshCw, Settings, ChevronDown,
   ChevronUp, Trash2, Copy, X, AlertCircle, Type, AlignLeft, Hash, Zap,
-  ZoomIn, Maximize2, Plus, RotateCcw
+  ZoomIn, Maximize2, Plus, RotateCcw, DollarSign, Clock, Database, TrendingUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
@@ -271,10 +271,15 @@ interface MetadataGeneratorPageProps {
 }
 
 export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ guestAllowed = false }) => {
-  const { deductCredits, isAuthenticated } = useStore();
+  const { deductCredits, isAuthenticated, apiKeys } = useStore();
   const { deductGuestCredit, incrementGenerations, guestCredits } = useGuestStore();
   const guestGenCount = useRef(0);
   const { getTemplate } = usePromptStore();
+  const metadataCache = useRef<Map<string, Partial<ImageFile>>>(new Map());
+  const getCacheKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
+  const activeKey = apiKeys.find(k => k.isDefault && k.isEnabled) ?? apiKeys.find(k => k.isEnabled);
+  const activeModel = activeKey?.modelName ?? 'gpt-4o-mini';
+  const tierInfo = MODEL_TIERS[activeModel];
   const [images, setImages] = useState<ImageFile[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState('Adobe Stock');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -376,12 +381,26 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     setIsGenerating(true);
 
     let success = 0;
+    let cached = 0;
     let fail = 0;
 
-    for (let i = 0; i < pending.length; i += settings.batchSize) {
-      const chunk = pending.slice(i, i + settings.batchSize);
+    // Apply cached results instantly (no API call, no credit deduction)
+    const uncached: ImageFile[] = [];
+    for (const img of pending) {
+      const hit = metadataCache.current.get(getCacheKey(img.file));
+      if (hit) {
+        setImages(prev => prev.map(i => i.id === img.id ? { ...i, ...hit, status: 'done' } : i));
+        cached++;
+        success++;
+      } else {
+        uncached.push(img);
+      }
+    }
+    if (cached > 0) toast.success(`${cached} image${cached !== 1 ? 's' : ''} loaded from cache instantly!`, { duration: 2500 });
 
-      // Mark the whole chunk as processing immediately
+    for (let i = 0; i < uncached.length; i += settings.batchSize) {
+      const chunk = uncached.slice(i, i + settings.batchSize);
+
       setImages(prev =>
         prev.map(img =>
           chunk.some(c => c.id === img.id)
@@ -390,18 +409,17 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
         )
       );
 
-      // Run the chunk concurrently, collect successes + failures
       const results = await Promise.allSettled(
         chunk.map(img =>
           generateField(img, 'all', settings, selectedMarketplace, getTemplate)
         )
       );
 
-      // Apply each result back to state
       results.forEach((result, idx) => {
         const img = chunk[idx];
         if (result.status === 'fulfilled') {
           setImages(prev => prev.map(i => i.id === img.id ? { ...i, ...result.value } : i));
+          metadataCache.current.set(getCacheKey(img.file), result.value);
           if (isAuthenticated) {
             deductCredits(1);
           } else {
@@ -421,7 +439,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     }
 
     setIsGenerating(false);
-    if (success > 0) toast.success(`Generated metadata for ${success} image${success !== 1 ? 's' : ''}!`);
+    if (success > 0 && uncached.length > 0) toast.success(`Generated metadata for ${success - cached} image${(success - cached) !== 1 ? 's' : ''}!`);
     if (fail > 0) toast.error(`${fail} image${fail !== 1 ? 's' : ''} failed — check AI Settings for API key`);
   };
 
@@ -764,7 +782,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                 size="sm"
                 loading={isGenerating}
                 onClick={generateAll}
-                disabled={images.length === 0 || (!isAuthenticated && guestCredits <= 0)}
+                disabled={images.filter(i => i.status !== 'done').length === 0 || (!isAuthenticated && guestCredits <= 0)}
                 icon={<Zap size={13} />}
               >
                 {isGenerating
@@ -780,6 +798,75 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               )}
             </div>
           </div>
+
+          {/* ── Cost Estimation Panel ── */}
+          {images.filter(i => i.status !== 'done').length > 0 && (() => {
+            const pendingCount = images.filter(i => i.status !== 'done').length;
+            const cachedCount = images.filter(i => i.status !== 'done').filter(i => metadataCache.current.has(getCacheKey(i.file))).length;
+            const uncachedCount = pendingCount - cachedCount;
+            const est = estimateBatchCost(activeModel, uncachedCount);
+            const tierColors: Record<number, string> = {
+              1: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700/30',
+              2: 'text-[#6366F1] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#6366F1]/10 border-[#A5B4FC]/40 dark:border-[#6366F1]/20',
+              3: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/30',
+            };
+            const tc = tierColors[est.tier] ?? tierColors[2];
+            return (
+              <div className={`rounded-2xl border p-4 ${tc}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp size={14} />
+                  <span className="text-xs font-bold uppercase tracking-wide">Batch Estimate</span>
+                  <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-current/10 border border-current/20">
+                    T{est.tier} · {est.tierLabel}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="flex items-center gap-2">
+                    <Database size={13} className="flex-shrink-0 opacity-70" />
+                    <div>
+                      <p className="text-[10px] opacity-70 font-medium">Images</p>
+                      <p className="text-sm font-bold">
+                        {uncachedCount} new
+                        {cachedCount > 0 && <span className="text-[10px] font-semibold opacity-70 ml-1">+{cachedCount} cached</span>}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign size={13} className="flex-shrink-0 opacity-70" />
+                    <div>
+                      <p className="text-[10px] opacity-70 font-medium">Est. Cost</p>
+                      <p className="text-sm font-bold">
+                        {uncachedCount === 0 ? 'Free (cached)' : est.totalCost < 0.001 ? '<$0.001' : `~$${est.totalCost.toFixed(3)}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign size={13} className="flex-shrink-0 opacity-70" />
+                    <div>
+                      <p className="text-[10px] opacity-70 font-medium">Per Image</p>
+                      <p className="text-sm font-bold">
+                        {MODEL_COST_PER_IMAGE[activeModel] === 0 ? 'Free' : MODEL_COST_PER_IMAGE[activeModel] ? `~$${MODEL_COST_PER_IMAGE[activeModel].toFixed(4)}` : '~$0.005'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={13} className="flex-shrink-0 opacity-70" />
+                    <div>
+                      <p className="text-[10px] opacity-70 font-medium">Est. Time</p>
+                      <p className="text-sm font-bold">
+                        {est.timeMinutes < 1 ? `~${Math.ceil(est.timeMinutes * 60)}s` : `~${est.timeMinutes.toFixed(1)}m`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] opacity-60 mt-2">
+                  Model: <span className="font-semibold">{activeModel}</span>
+                  {' · '}Estimates based on typical token usage. Actual cost may vary by provider.
+                  {cachedCount > 0 && ' Cached images are free and instant.'}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* ── Marketplace Selection (above upload) ── */}
           <Card padding="sm">

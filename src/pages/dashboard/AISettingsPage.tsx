@@ -5,7 +5,7 @@ import { Modal } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
-import { testApiKey, isVisionCapable } from '../../services/aiService';
+import { testApiKey, isVisionCapable, MODEL_TIERS } from '../../services/aiService';
 import { generateId } from '../../utils/cn';
 import type { APIKey } from '../../types';
 import {
@@ -119,11 +119,27 @@ const PROVIDER_API_URLS: Record<string, { url: string; label: string }> = {
   huggingface: { url: 'https://huggingface.co/settings/tokens',         label: 'HuggingFace Tokens' },
 };
 
+// Tier 1 defaults — optimized for bulk metadata generation (low cost, vision capable)
 const DEFAULT_MODELS: Record<string, string> = {
-  openai: 'gpt-4o', gemini: 'gemini-2.5-pro-preview-05-06', claude: 'claude-opus-4-8',
+  openai:      'gpt-4o-mini',
+  gemini:      'gemini-2.5-flash-preview-05-20',
+  claude:      'claude-haiku-4-5-20251001',
+  groq:        'meta-llama/llama-4-scout-17b-16e-instruct',
+  openrouter:  'openai/gpt-4o',
+  mistral:     'pixtral-12b-2409',
+  ollama:      'llava',
+  huggingface: 'meta-llama/Llama-3.2-11B-Vision-Instruct',
+  custom:      '',
+};
+
+// Higher-quality options users can switch to
+const TIER2_MODELS: Record<string, string> = {
+  openai: 'gpt-4o', gemini: 'gemini-2.5-pro-preview-05-06', claude: 'claude-sonnet-4-6',
   groq: 'meta-llama/llama-4-maverick-17b-128e-instruct', openrouter: 'openai/gpt-4.1',
-  mistral: 'pixtral-large-latest', ollama: 'llava',
-  huggingface: 'meta-llama/Llama-3.2-11B-Vision-Instruct', custom: '',
+  mistral: 'pixtral-large-latest',
+};
+const TIER3_MODELS: Record<string, string> = {
+  openai: 'gpt-4.1', claude: 'claude-opus-4-8', openrouter: 'openai/gpt-4.1',
 };
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
@@ -684,14 +700,43 @@ export const AISettingsPage: React.FC<AISettingsPageProps> = ({ guestAllowed = f
                   onChange={e => { if (e.target.value !== '_custom') setForm(f => ({ ...f, modelName: e.target.value })); }}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#0d1030] text-gray-900 dark:text-gray-100 text-sm focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/20 outline-none"
                 >
-                  {PROVIDER_MODELS[form.provider].map(m => (
-                    <option key={m.value} value={m.value}>
-                      {m.vision ? '👁 ' : '📝 '}{m.label}{m.value === DEFAULT_MODELS[form.provider] ? ' ⭐ Recommended' : ''}
-                    </option>
-                  ))}
+                  {PROVIDER_MODELS[form.provider].map(m => {
+                    const tier = MODEL_TIERS[m.value];
+                    const tierTag = tier ? ` [T${tier.tier} · ${tier.label}]` : '';
+                    const recommended = m.value === DEFAULT_MODELS[form.provider] ? ' ⭐' : '';
+                    return (
+                      <option key={m.value} value={m.value}>
+                        {m.vision ? '👁 ' : '📝 '}{m.label}{recommended}{tierTag}
+                      </option>
+                    );
+                  })}
                   <option value="_custom">✏️ Custom model name…</option>
                 </select>
               ) : null}
+              {/* Quick tier switch buttons */}
+              {(TIER2_MODELS[form.provider] || TIER3_MODELS[form.provider]) && (
+                <div className="flex gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-gray-400 self-center">Switch to:</span>
+                  {TIER2_MODELS[form.provider] && form.modelName !== TIER2_MODELS[form.provider] && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, modelName: TIER2_MODELS[form.provider] }))}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-[#EEF2FF] dark:bg-[#6366F1]/15 text-[#6366F1] font-semibold hover:bg-[#6366F1] hover:text-white transition-colors">
+                      T2 Balanced
+                    </button>
+                  )}
+                  {TIER3_MODELS[form.provider] && form.modelName !== TIER3_MODELS[form.provider] && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, modelName: TIER3_MODELS[form.provider] }))}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-semibold hover:bg-amber-500 hover:text-white transition-colors">
+                      T3 Premium
+                    </button>
+                  )}
+                  {form.modelName !== DEFAULT_MODELS[form.provider] && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, modelName: DEFAULT_MODELS[form.provider] }))}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-semibold hover:bg-emerald-500 hover:text-white transition-colors">
+                      ⭐ T1 Default
+                    </button>
+                  )}
+                </div>
+              )}
               <input
                 type="text"
                 placeholder={DEFAULT_MODELS[form.provider] || 'Enter exact model name'}

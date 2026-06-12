@@ -84,6 +84,111 @@ export interface AIResponse {
   model: string;
 }
 
+// ─── Model Tier & Cost Data ───────────────────────────────────────────────────
+// Cost per image based on ~1,365 input tokens + ~900 output tokens per request
+
+export const MODEL_COST_PER_IMAGE: Record<string, number> = {
+  // Tier 1 — Budget (best for bulk)
+  'gpt-4o-mini':                                    0.0008,
+  'gemini-2.5-flash-preview-05-20':                 0.0004,
+  'gemini-2.0-flash':                               0.0007,
+  'gemini-1.5-flash':                               0.0005,
+  'claude-haiku-4-5-20251001':                      0.0045,
+  'meta-llama/llama-4-scout-17b-16e-instruct':      0.0005,
+  'meta-llama/llama-4-scout':                       0.0005,
+  'pixtral-12b-2409':                               0.0003,
+  'google/gemini-2.0-flash-001':                    0.0007,
+  'llama-3.1-8b-instant':                           0.0003,
+  'gpt-3.5-turbo':                                  0.0020,
+  // Tier 2 — Balanced
+  'gpt-4o':                                         0.0125,
+  'gemini-2.5-pro-preview-05-06':                   0.0106,
+  'gemini-1.5-pro':                                 0.0050,
+  'claude-sonnet-4-6':                              0.0175,
+  'claude-3-5-sonnet-20241022':                     0.0175,
+  'meta-llama/llama-4-maverick-17b-128e-instruct':  0.0014,
+  'pixtral-large-latest':                           0.0082,
+  'mistral-large-latest':                           0.0040,
+  'llama-3.3-70b-versatile':                        0.0010,
+  'openai/gpt-4o':                                  0.0125,
+  'anthropic/claude-3.5-sonnet':                    0.0175,
+  'mistralai/pixtral-large-2411':                   0.0082,
+  'qwen/qwen-vl-plus':                              0.0010,
+  // Tier 3 — Premium
+  'gpt-4.1':                                        0.0100,
+  'gpt-4-turbo':                                    0.0125,
+  'claude-opus-4-8':                                0.0874,
+  'claude-3-opus-20240229':                         0.0874,
+  'o1':                                             0.0300,
+  'openai/gpt-4.1':                                 0.0100,
+  // Local / free
+  'llava': 0, 'llava:13b': 0, 'llava:34b': 0, 'bakllava': 0,
+  'llava-llama3': 0, 'moondream': 0, 'minicpm-v': 0, 'qwen2-vl': 0,
+  'meta-llama/Llama-3.2-11B-Vision-Instruct': 0,
+};
+
+export type ModelTier = 1 | 2 | 3;
+
+export const MODEL_TIERS: Record<string, { tier: ModelTier; label: string; color: string }> = {
+  // Tier 1
+  'gpt-4o-mini':                                    { tier: 1, label: 'Budget',   color: '#10B981' },
+  'gemini-2.5-flash-preview-05-20':                 { tier: 1, label: 'Budget',   color: '#10B981' },
+  'gemini-2.0-flash':                               { tier: 1, label: 'Budget',   color: '#10B981' },
+  'gemini-1.5-flash':                               { tier: 1, label: 'Budget',   color: '#10B981' },
+  'claude-haiku-4-5-20251001':                      { tier: 1, label: 'Budget',   color: '#10B981' },
+  'meta-llama/llama-4-scout-17b-16e-instruct':      { tier: 1, label: 'Budget',   color: '#10B981' },
+  'meta-llama/llama-4-scout':                       { tier: 1, label: 'Budget',   color: '#10B981' },
+  'pixtral-12b-2409':                               { tier: 1, label: 'Budget',   color: '#10B981' },
+  'google/gemini-2.0-flash-001':                    { tier: 1, label: 'Budget',   color: '#10B981' },
+  'llama-3.1-8b-instant':                           { tier: 1, label: 'Budget',   color: '#10B981' },
+  'gpt-3.5-turbo':                                  { tier: 1, label: 'Budget',   color: '#10B981' },
+  // Tier 2
+  'gpt-4o':                                         { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'gemini-2.5-pro-preview-05-06':                   { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'gemini-1.5-pro':                                 { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'claude-sonnet-4-6':                              { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'claude-3-5-sonnet-20241022':                     { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'meta-llama/llama-4-maverick-17b-128e-instruct':  { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'pixtral-large-latest':                           { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'mistral-large-latest':                           { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'llama-3.3-70b-versatile':                        { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'openai/gpt-4o':                                  { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'anthropic/claude-3.5-sonnet':                    { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'mistralai/pixtral-large-2411':                   { tier: 2, label: 'Balanced', color: '#6366F1' },
+  'qwen/qwen-vl-plus':                              { tier: 2, label: 'Balanced', color: '#6366F1' },
+  // Tier 3
+  'gpt-4.1':                                        { tier: 3, label: 'Premium',  color: '#F59E0B' },
+  'gpt-4-turbo':                                    { tier: 3, label: 'Premium',  color: '#F59E0B' },
+  'claude-opus-4-8':                                { tier: 3, label: 'Premium',  color: '#F59E0B' },
+  'claude-3-opus-20240229':                         { tier: 3, label: 'Premium',  color: '#F59E0B' },
+  'o1':                                             { tier: 3, label: 'Premium',  color: '#F59E0B' },
+  'openai/gpt-4.1':                                 { tier: 3, label: 'Premium',  color: '#F59E0B' },
+};
+
+// Seconds per image per tier (approximate, depends on API latency)
+const SECS_PER_IMAGE: Record<ModelTier, number> = { 1: 3, 2: 6, 3: 10 };
+
+export function estimateBatchCost(model: string, imageCount: number): {
+  costPerImage: number;
+  totalCost: number;
+  timeMinutes: number;
+  tier: ModelTier;
+  tierLabel: string;
+} {
+  const costPerImage = MODEL_COST_PER_IMAGE[model] ?? 0.005;
+  const tierInfo = MODEL_TIERS[model];
+  const tier: ModelTier = tierInfo?.tier ?? 2;
+  const tierLabel = tierInfo?.label ?? 'Balanced';
+  const totalSeconds = imageCount * SECS_PER_IMAGE[tier];
+  return {
+    costPerImage,
+    totalCost: costPerImage * imageCount,
+    timeMinutes: totalSeconds / 60,
+    tier,
+    tierLabel,
+  };
+}
+
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 export function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
