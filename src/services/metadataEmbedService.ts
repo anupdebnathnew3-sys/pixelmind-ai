@@ -533,7 +533,7 @@ function buildZIP(files: Array<{ name: string; data: Uint8Array }>): Uint8Array 
 export interface ZIPItem {
   imageFile: File;
   meta: EmbedMetadata;
-  txtContent: string;
+  outputFilename: string; // title-derived filename (already sanitized + deduplicated)
 }
 
 export async function buildZIPPackage(
@@ -545,10 +545,9 @@ export async function buildZIPPackage(
 
   for (let i = 0; i < items.length; i++) {
     onProgress?.(i, items.length);
-    const { imageFile, meta, txtContent } = items[i];
-    const baseName = imageFile.name.replace(/\.[^.]+$/, '');
+    const { imageFile, meta, outputFilename } = items[i];
 
-    // Embed metadata into image (fall back to original on failure)
+    // Embed metadata into image (fall back to original on failure — zero re-encoding)
     let imageData: Uint8Array;
     try {
       const { blob } = await embedMetadata(imageFile, meta);
@@ -557,12 +556,11 @@ export async function buildZIPPackage(
       imageData = new Uint8Array(await imageFile.arrayBuffer());
     }
 
-    files.push({ name: imageFile.name,              data: imageData });
-    files.push({ name: `${baseName}_metadata.txt`,  data: ENC.encode(txtContent) });
+    files.push({ name: outputFilename, data: imageData });
   }
 
-  // Single CSV for all images
-  files.push({ name: 'metadata_all.csv', data: ENC.encode(csvContent) });
+  // Single CSV — no TXT files
+  files.push({ name: 'Metadata.csv', data: ENC.encode(csvContent) });
 
   onProgress?.(items.length, items.length);
   const zipBytes = buildZIP(files);

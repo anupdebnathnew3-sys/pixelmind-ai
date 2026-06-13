@@ -519,39 +519,41 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     rating:      img.rating,
   });
 
-  const buildTXTContent = (img: ImageFile): string => [
-    `File: ${img.file.name}`,
-    `Title: ${applyAffixes(img.title || '')}`,
-    `Description: ${img.description || ''}`,
-    `Keywords: ${(img.keywords || []).join(', ')}`,
-    `Category: ${img.category || ''}`,
-    ...(getEffectiveAuthor(img) ? [`Author: ${getEffectiveAuthor(img)}`] : []),
-    ...(getEffectiveCopyright(img) ? [`Copyright: ${getEffectiveCopyright(img)}`] : []),
-    ...(img.rating ? [`Rating: ${'★'.repeat(img.rating)}${'☆'.repeat(5 - img.rating)} (${img.rating}/5)`] : []),
-  ].join('\n');
+  const sanitizeFilename = (title: string, originalName: string): string => {
+    const ext = originalName.match(/\.[^.]+$/)?.[0] ?? '';
+    const cleaned = title
+      .trim()
+      .replace(/[/\\:*?"<>|]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 150);
+    return (cleaned || originalName.replace(/\.[^.]+$/, '')) + ext;
+  };
 
-  const buildCSVContent = (rows: ImageFile[]): string => {
-    const headers = ['File Name', 'Title', 'Description', 'Keywords', 'Category', 'Author', 'Copyright', 'Rating'];
-    const dataRows = rows.map(img => [
-      `"${img.file.name.replace(/"/g, '""')}"`,
-      `"${applyAffixes(img.title || '').replace(/"/g, '""')}"`,
-      `"${(img.description || '').replace(/"/g, '""')}"`,
-      `"${(img.keywords || []).join(', ')}"`,
-      `"${img.category || ''}"`,
-      `"${getEffectiveAuthor(img).replace(/"/g, '""')}"`,
-      `"${getEffectiveCopyright(img).replace(/"/g, '""')}"`,
-      `"${img.rating ? `${img.rating}/5` : ''}"`,
-    ]);
+  const buildCSVContent = (rows: ImageFile[], nameMap?: Map<string, string>): string => {
+    const headers = ['File Name', 'Title', 'Description', 'Keywords', 'Author Name', 'Copyright', 'Rating'];
+    const dataRows = rows.map(img => {
+      const outName = nameMap?.get(img.id) ?? sanitizeFilename(applyAffixes(img.title || ''), img.file.name);
+      return [
+        `"${outName.replace(/"/g, '""')}"`,
+        `"${applyAffixes(img.title || '').replace(/"/g, '""')}"`,
+        `"${(img.description || '').replace(/"/g, '""')}"`,
+        `"${(img.keywords || []).join(', ')}"`,
+        `"${getEffectiveAuthor(img).replace(/"/g, '""')}"`,
+        `"${getEffectiveCopyright(img).replace(/"/g, '""')}"`,
+        `"${(img.rating ?? 5)}/5"`,
+      ];
+    });
     return [headers.join(','), ...dataRows.map(r => r.join(','))].join('\n');
   };
 
   const exportCSV = () => {
     const done = images.filter(i => i.status === 'done');
     if (!done.length) { toast.error('No data to export'); return; }
-    const csv = buildCSVContent(done);
+    const csv = buildCSVContent(done); // no nameMap → uses sanitized title filenames
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'metadata-export.csv'; a.click();
+    a.href = URL.createObjectURL(blob); a.download = 'Metadata.csv'; a.click();
     toast.success('CSV exported!');
   };
 
@@ -573,18 +575,38 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     setZipLoading(true);
     const tid = toast.loading(`Preparing ZIP for ${done.length} image${done.length !== 1 ? 's' : ''}…`);
     try {
+      // Build deduplicated title-based filenames
+      const usedNames = new Set<string>();
+      const nameMap = new Map<string, string>(); // img.id → outputFilename
+      for (const img of done) {
+        const base = sanitizeFilename(applyAffixes(img.title || ''), img.file.name);
+        const ext  = base.match(/\.[^.]+$/)?.[0] ?? '';
+        const stem = base.slice(0, base.length - ext.length);
+        let candidate = base;
+        let counter = 1;
+        while (usedNames.has(candidate.toLowerCase())) {
+          candidate = `${stem} (${counter})${ext}`;
+          counter++;
+        }
+        usedNames.add(candidate.toLowerCase());
+        nameMap.set(img.id, candidate);
+      }
+
       const items: ZIPItem[] = done.map(img => ({
-        imageFile:  img.file,
-        meta:       buildEmbedMeta(img),
-        txtContent: buildTXTContent(img),
+        imageFile:      img.file,
+        meta:           buildEmbedMeta(img),
+        outputFilename: nameMap.get(img.id)!,
       }));
-      const csvContent = '﻿' + buildCSVContent(done);
+
+      const csvContent = '﻿' + buildCSVContent(done, nameMap);
+
       const zipBlob = await buildZIPPackage(items, csvContent, (d, t) => {
-        toast.loading(`Packaging ${d + 1}/${t}: ${done[d]?.file.name ?? ''}…`, { id: tid });
+        toast.loading(`Embedding ${d + 1}/${t}: ${nameMap.get(done[d]?.id ?? '') ?? ''}…`, { id: tid });
       });
+
       toast.dismiss(tid);
-      triggerDownload(zipBlob, 'PixelMind_Metadata_Export.zip');
-      toast.success(`ZIP with ${done.length} image${done.length !== 1 ? 's' : ''} downloaded!`);
+      triggerDownload(zipBlob, 'Processed_Images.zip');
+      toast.success(`ZIP ready — ${done.length} image${done.length !== 1 ? 's' : ''} + Metadata.csv`);
     } catch (err) {
       toast.dismiss(tid);
       toast.error(err instanceof Error ? err.message : 'ZIP generation failed');
@@ -1488,7 +1510,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                   <div className="text-left flex-1">
                     <p className="text-base font-bold text-gray-900 dark:text-white">Embed All &amp; Download ZIP</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {doneCount} image{doneCount !== 1 ? 's' : ''} · XMP · IPTC · EXIF · CSV — zero quality loss
+                      {doneCount} image{doneCount !== 1 ? 's' : ''} (title-renamed) + Metadata.csv · XMP · IPTC · EXIF
                     </p>
                   </div>
                   <FileDown size={16} className="opacity-40 group-hover:opacity-100 transition-opacity flex-shrink-0 text-[#6366F1]" />
