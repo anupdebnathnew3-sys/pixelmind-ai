@@ -273,6 +273,46 @@ async function generateField(
   };
 }
 
+// ─── Persistence helpers ──────────────────────────────────────────────────────
+
+const SETTINGS_STORAGE_KEY = 'pixelmind_meta_settings_v1';
+
+const DEFAULT_SETTINGS: MetadataSettings = {
+  titleLength: 120,
+  descLength: 150,
+  keywordCount: 40,
+  keywordStyle: 'single',
+  pngBackground: false,
+  whiteBackground: false,
+  keywordPriority: true,
+  batchSize: 1,
+  titlePrefix: '',
+  titleSuffix: '',
+  titleAffixEnabled: false,
+  forceCategory: '',
+};
+
+function loadPersistedSettings(): {
+  settings: MetadataSettings;
+  marketplace: string;
+  author: string;
+  copyright: string;
+} {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return { settings: DEFAULT_SETTINGS, marketplace: 'Adobe Stock', author: '', copyright: '' };
+    const parsed = JSON.parse(raw);
+    return {
+      settings:  { ...DEFAULT_SETTINGS, ...(parsed.settings  ?? {}) },
+      marketplace: parsed.marketplace ?? 'Adobe Stock',
+      author:      parsed.author      ?? '',
+      copyright:   parsed.copyright   ?? '',
+    };
+  } catch {
+    return { settings: DEFAULT_SETTINGS, marketplace: 'Adobe Stock', author: '', copyright: '' };
+  }
+}
+
 interface MetadataGeneratorPageProps {
   guestAllowed?: boolean;
 }
@@ -288,34 +328,22 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const embedCreator   = cmsContent['meta_embed_creator']   ?? '';
   const metadataCache = useRef<Map<string, Partial<ImageFile>>>(new Map());
   const getCacheKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
+  const _persisted = useRef(loadPersistedSettings());
   const [images, setImages] = useState<ImageFile[]>([]);
-  const [selectedMarketplace, setSelectedMarketplace] = useState('Adobe Stock');
+  const [selectedMarketplace, setSelectedMarketplace] = useState(_persisted.current.marketplace);
   const [isGenerating, setIsGenerating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [categoryDropOpen, setCategoryDropOpen] = useState<string | null>(null); // imageId
+  const [categoryDropOpen, setCategoryDropOpen] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
-  const [globalAuthor, setGlobalAuthor] = useState('');
-  const [globalCopyright, setGlobalCopyright] = useState('');
+  const [globalAuthor, setGlobalAuthor] = useState(_persisted.current.author);
+  const [globalCopyright, setGlobalCopyright] = useState(_persisted.current.copyright);
   const exportRef = useRef<HTMLDivElement>(null);
   const categoryDropRef = useRef<HTMLDivElement>(null);
   const wasGenerating = useRef(false);
-  const [settings, setSettings] = useState<MetadataSettings>({
-    titleLength: 120,
-    descLength: 150,
-    keywordCount: 40,
-    keywordStyle: 'single',
-    pngBackground: false,
-    whiteBackground: false,
-    keywordPriority: true,
-    batchSize: 1,
-    titlePrefix: '',
-    titleSuffix: '',
-    titleAffixEnabled: false,
-    forceCategory: '',
-  });
+  const [settings, setSettings] = useState<MetadataSettings>(_persisted.current.settings);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -329,6 +357,18 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Auto-save all sidebar settings to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
+        settings,
+        marketplace: selectedMarketplace,
+        author:      globalAuthor,
+        copyright:   globalCopyright,
+      }));
+    } catch { /* storage unavailable — ignore */ }
+  }, [settings, selectedMarketplace, globalAuthor, globalCopyright]);
 
   // Show export modal when generation finishes and at least one file is done
   useEffect(() => {
