@@ -11,10 +11,12 @@ import { callAI, imageToBase64ForAI, extractJSON } from '../../services/aiServic
 import {
   Upload, Image, Download, RefreshCw, Settings, ChevronDown,
   ChevronUp, Trash2, Copy, X, AlertCircle, Type, AlignLeft, Hash, Zap,
-  ZoomIn, Maximize2, Plus, RotateCcw, Sparkles
+  ZoomIn, Maximize2, Plus, RotateCcw, Sparkles, FileDown, FileText, Layers
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
+import { useAdminStore } from '../../store/useAdminStore';
+import { embedMetadata, triggerDownload } from '../../services/metadataEmbedService';
 
 const MARKETPLACES = [
   { id: 'Adobe Stock', icon: '🅐', color: '#FF0000' },
@@ -275,6 +277,10 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const { deductGuestCredit, incrementGenerations, guestCredits } = useGuestStore();
   const guestGenCount = useRef(0);
   const { getTemplate } = usePromptStore();
+  const { cmsContent } = useAdminStore();
+  const embedEnabled  = (cmsContent['meta_embed_enabled']   ?? 'true') === 'true';
+  const embedCopyright = cmsContent['meta_embed_copyright'] ?? '';
+  const embedCreator   = cmsContent['meta_embed_creator']   ?? '';
   const metadataCache = useRef<Map<string, Partial<ImageFile>>>(new Map());
   const getCacheKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -285,6 +291,8 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const [showExportModal, setShowExportModal] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [categoryDropOpen, setCategoryDropOpen] = useState<string | null>(null); // imageId
+  const [embeddingIds, setEmbeddingIds] = useState<Set<string>>(new Set());
+  const [embedAllLoading, setEmbedAllLoading] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const categoryDropRef = useRef<HTMLDivElement>(null);
   const wasGenerating = useRef(false);
@@ -486,6 +494,78 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'metadata-export.txt'; a.click();
     toast.success('TXT exported!');
+  };
+
+  const downloadSingleTXT = (img: ImageFile) => {
+    const text = [
+      `File: ${img.file.name}`,
+      `Title: ${applyAffixes(img.title || '')}`,
+      `Description: ${img.description || ''}`,
+      `Keywords: ${(img.keywords || []).join(', ')}`,
+      `Category: ${img.category || ''}`,
+    ].join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    triggerDownload(blob, `${img.file.name.replace(/\.[^.]+$/, '')}_metadata.txt`);
+    toast.success('Metadata .TXT downloaded!');
+  };
+
+  const downloadEmbedded = async (img: ImageFile) => {
+    if (!embedEnabled) { toast.error('Metadata embedding is disabled by admin'); return; }
+    setEmbeddingIds(prev => new Set(prev).add(img.id));
+    const tid = toast.loading('Embedding metadata…');
+    try {
+      const { blob, filename, warning } = await embedMetadata(
+        img.file,
+        {
+          title:       applyAffixes(img.title || ''),
+          description: img.description || '',
+          keywords:    img.keywords || [],
+          copyright:   embedCopyright || undefined,
+          creator:     embedCreator   || undefined,
+        },
+        (stage) => {
+          if (stage === 'embedding') toast.loading('Writing metadata into file…', { id: tid });
+        },
+      );
+      toast.dismiss(tid);
+      if (warning) toast(warning, { icon: '⚠️', duration: 5000 });
+      triggerDownload(blob, filename);
+      toast.success(`${filename} — metadata embedded & downloaded!`);
+    } catch (err) {
+      toast.dismiss(tid);
+      toast.error(err instanceof Error ? err.message : 'Embed failed');
+    } finally {
+      setEmbeddingIds(prev => { const s = new Set(prev); s.delete(img.id); return s; });
+    }
+  };
+
+  const downloadAllEmbedded = async () => {
+    if (!embedEnabled) { toast.error('Metadata embedding is disabled by admin'); return; }
+    const done = images.filter(i => i.status === 'done');
+    if (!done.length) { toast.error('No completed images to download'); return; }
+    setEmbedAllLoading(true);
+    const tid = toast.loading(`Embedding ${done.length} image${done.length !== 1 ? 's' : ''}…`);
+    let success = 0;
+    for (let i = 0; i < done.length; i++) {
+      const img = done[i];
+      try {
+        toast.loading(`Embedding ${i + 1}/${done.length}: ${img.file.name}`, { id: tid });
+        const { blob, filename, warning } = await embedMetadata(img.file, {
+          title:       applyAffixes(img.title || ''),
+          description: img.description || '',
+          keywords:    img.keywords || [],
+          copyright:   embedCopyright || undefined,
+          creator:     embedCreator   || undefined,
+        });
+        if (warning) toast(warning, { icon: '⚠️', duration: 4000 });
+        triggerDownload(blob, filename);
+        success++;
+        if (i < done.length - 1) await new Promise(r => setTimeout(r, 400));
+      } catch { /* individual failure, continue */ }
+    }
+    toast.dismiss(tid);
+    toast.success(`${success}/${done.length} images embedded & downloaded!`);
+    setEmbedAllLoading(false);
   };
 
   const doneCount = images.filter(i => i.status === 'done').length;
@@ -743,6 +823,19 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Embed All button */}
+              {doneCount > 0 && embedEnabled && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={embedAllLoading}
+                  icon={<Layers size={13} />}
+                  onClick={downloadAllEmbedded}
+                >
+                  {embedAllLoading ? 'Embedding…' : `Embed All (${doneCount})`}
+                </Button>
+              )}
+
               {/* Export dropdown */}
               {doneCount > 0 && (
                 <div className="relative" ref={exportRef}>
@@ -1219,6 +1312,46 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                             <p className="text-xs text-gray-400 italic">Not generated yet</p>
                           )}
                         </div>
+
+                        {/* ── EMBED & DOWNLOAD bar ── */}
+                        {isDone && embedEnabled && (
+                          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-[#EEF2FF]/40 dark:from-[#0d1030]/60 dark:to-[#6366F1]/5 border-t border-gray-100 dark:border-[#232650]">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2 text-[10px] text-gray-400 min-w-0">
+                                <span className="px-1.5 py-0.5 rounded-md font-bold bg-[#6366F1]/10 text-[#6366F1] dark:text-[#A5B4FC] uppercase tracking-wide">
+                                  {img.file.name.split('.').pop()?.toUpperCase()}
+                                </span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">{(img.file.size / (1024 * 1024)).toFixed(1)} MB</span>
+                                <span className="text-gray-300 dark:text-gray-600">·</span>
+                                <span>{img.keywords?.length || 0} keywords</span>
+                                {embeddingIds.has(img.id) && (
+                                  <span className="flex items-center gap-1 text-[#6366F1] font-medium">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-ping" />
+                                    Embedding…
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <button
+                                  onClick={() => downloadSingleTXT(img)}
+                                  title="Download metadata as .TXT"
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] hover:border-[#6366F1] hover:text-[#6366F1] dark:hover:text-[#A5B4FC] transition-colors"
+                                >
+                                  <FileText size={11} /> .TXT
+                                </button>
+                                <button
+                                  onClick={() => downloadEmbedded(img)}
+                                  disabled={embeddingIds.has(img.id)}
+                                  title="Embed XMP/IPTC metadata into image file & download"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] text-white hover:from-[#4F46E5] hover:to-[#7C3AED] transition-all shadow-sm shadow-[#6366F1]/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <FileDown size={11} />
+                                  {embeddingIds.has(img.id) ? 'Embedding…' : 'Embed & Download'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1297,6 +1430,23 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                   </button>
                 ))}
               </div>
+
+              {/* Embed & download images option */}
+              {embedEnabled && (
+                <button
+                  onClick={() => { setShowExportModal(false); downloadAllEmbedded(); }}
+                  className="w-full mt-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-[#6366F1]/30 bg-gradient-to-br from-[#EEF2FF] to-[#EEF2FF] dark:from-[#6366F1]/10 dark:to-[#8B5CF6]/5 hover:shadow-md hover:scale-[1.01] transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm bg-gradient-to-br from-[#6366F1] to-[#8B5CF6]">
+                    <Layers size={16} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Embed &amp; Download Images</p>
+                    <p className="text-[11px] text-gray-400">XMP · IPTC · EXIF — zero quality loss</p>
+                  </div>
+                  <FileDown size={13} className="opacity-30 group-hover:opacity-100 transition-opacity flex-shrink-0 text-[#6366F1]" />
+                </button>
+              )}
 
               <button
                 onClick={() => setShowExportModal(false)}

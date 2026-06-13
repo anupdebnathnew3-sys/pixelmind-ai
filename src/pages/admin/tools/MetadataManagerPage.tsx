@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/Input';
 import { Toggle } from '../../../components/ui/Card';
 import { useAdminStore } from '../../../store/useAdminStore';
 import { ToolManagerTemplate } from './ToolManagerTemplate';
-import { Image, Save, Hash } from 'lucide-react';
+import { Image, Save, Hash, Download, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const MetadataManagerPage: React.FC = () => {
@@ -24,6 +24,12 @@ export const MetadataManagerPage: React.FC = () => {
 
   const [guestAllowed, setGuestAllowed] = useState(get('meta_guest_allowed', 'true') === 'true');
   const [bulkAllowed, setBulkAllowed] = useState(get('meta_bulk_allowed', 'true') === 'true');
+  const [embedEnabled, setEmbedEnabled] = useState(get('meta_embed_enabled', 'true') === 'true');
+  const [embedSettings, setEmbedSettings] = useState({
+    meta_embed_copyright: get('meta_embed_copyright', ''),
+    meta_embed_creator:   get('meta_embed_creator', ''),
+    meta_embed_website:   get('meta_embed_website', ''),
+  });
 
   const save = () => {
     bulkUpdateCMSContent({
@@ -32,6 +38,14 @@ export const MetadataManagerPage: React.FC = () => {
       meta_bulk_allowed: bulkAllowed ? 'true' : 'false',
     });
     toast.success('Metadata tool settings saved');
+  };
+
+  const saveEmbed = () => {
+    bulkUpdateCMSContent({
+      ...embedSettings,
+      meta_embed_enabled: embedEnabled ? 'true' : 'false',
+    });
+    toast.success('Embedding settings saved');
   };
 
   return (
@@ -76,6 +90,58 @@ export const MetadataManagerPage: React.FC = () => {
         </div>
         <div className="mt-4 flex justify-end">
           <Button size="sm" icon={<Save size={14} />} onClick={save}>Save UI Text</Button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <Download size={16} className="text-[#6366F1]" />
+            <h2 className="font-bold text-gray-900 dark:text-white">Metadata Embedding</h2>
+          </div>
+          <Button size="sm" icon={<Save size={14} />} onClick={saveEmbed}>Save</Button>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#191c40] rounded-xl mb-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Enable Metadata Embedding</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Allow users to embed XMP + IPTC metadata directly into image files</p>
+          </div>
+          <Toggle checked={embedEnabled} onChange={setEmbedEnabled} label="" />
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4 mb-4">
+          <Input
+            label="Default Copyright Text"
+            placeholder="© 2024 Your Company"
+            value={embedSettings.meta_embed_copyright}
+            onChange={e => setEmbedSettings(s => ({ ...s, meta_embed_copyright: e.target.value }))}
+          />
+          <Input
+            label="Default Creator / Author Name"
+            placeholder="e.g. PixelMind AI"
+            value={embedSettings.meta_embed_creator}
+            onChange={e => setEmbedSettings(s => ({ ...s, meta_embed_creator: e.target.value }))}
+          />
+          <Input
+            label="Website / Source URL"
+            placeholder="https://yoursite.com"
+            value={embedSettings.meta_embed_website}
+            onChange={e => setEmbedSettings(s => ({ ...s, meta_embed_website: e.target.value }))}
+          />
+        </div>
+
+        <div className="flex items-start gap-2 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-xl">
+          <Shield size={14} className="text-indigo-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1">Supported formats — zero quality loss</p>
+            <div className="flex flex-wrap gap-2">
+              {['JPEG · XMP APP1 + IPTC APP13', 'PNG · iTXt + XMP chunk', 'WEBP · XMP chunk (VP8X)'].map(f => (
+                <span key={f} className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded text-xs font-mono">{f}</span>
+              ))}
+            </div>
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2">Metadata is injected as binary segments — image pixels and compression are never touched.</p>
+          </div>
         </div>
       </Card>
     </ToolManagerTemplate>
