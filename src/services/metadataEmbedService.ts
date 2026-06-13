@@ -2,13 +2,15 @@
 // JPEG: XMP (APP1) + IPTC (APP13) injected after SOI/APP0, image data untouched.
 // PNG:  iTXt + XMP:com.adobe.xmp chunks injected after IHDR.
 // WebP: XMP chunk injected into RIFF container, bitstream untouched.
+// ZIP:  STORE-method ZIP (no compression) for bulk export packages.
 
 export interface EmbedMetadata {
   title: string;
   description: string;
   keywords: string[];
   copyright?: string;
-  creator?: string;
+  creator?: string;  // author / byline
+  rating?: number;   // 1–5 XMP star rating
 }
 
 export type EmbedStage = 'reading' | 'embedding' | 'done';
@@ -28,6 +30,9 @@ function buildXMPXML(m: EmbedMetadata): string {
   const creator = m.creator
     ? `\n   <dc:creator><rdf:Seq><rdf:li>${escX(m.creator)}</rdf:li></rdf:Seq></dc:creator>`
     : '';
+  const rating = m.rating && m.rating >= 1 && m.rating <= 5
+    ? `\n   <xmp:Rating>${m.rating}</xmp:Rating>`
+    : '';
   return `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="PixelMind AI">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
@@ -43,7 +48,8 @@ ${kws}
     </rdf:Bag>
    </dc:subject>${rights}${creator}
    <photoshop:Headline>${escX(m.title)}</photoshop:Headline>
-   <xmp:CreatorTool>PixelMind AI</xmp:CreatorTool>
+   <photoshop:Caption>${escX(m.description)}</photoshop:Caption>
+   <xmp:CreatorTool>PixelMind AI</xmp:CreatorTool>${rating}
   </rdf:Description>
  </rdf:RDF>
 </x:xmpmeta>
@@ -70,6 +76,10 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
 
 function u16BE(n: number): Uint8Array {
   return new Uint8Array([(n >> 8) & 0xFF, n & 0xFF]);
+}
+
+function u16LE(n: number): Uint8Array {
+  return new Uint8Array([n & 0xFF, (n >> 8) & 0xFF]);
 }
 
 function u32BE(n: number): Uint8Array {
@@ -118,11 +128,12 @@ function buildJPEGIPTC(m: EmbedMetadata): Uint8Array {
     if (d.length) records.push(buildIPTCRecord(ds, d));
   };
 
-  addRec(0x05, m.title, 64);          // Object Name
-  addRec(0x78, m.description, 2000);  // Caption/Abstract
+  addRec(0x05, m.title, 64);          // Object Name (title)
+  addRec(0x69, m.title, 256);         // Headline (title — read by Adobe Stock)
+  addRec(0x78, m.description, 2000);  // Caption/Abstract (description)
   for (const kw of m.keywords.slice(0, 50)) addRec(0x19, kw, 64); // Keywords
   if (m.copyright) addRec(0x74, m.copyright, 128); // Copyright
-  if (m.creator)   addRec(0x50, m.creator, 32);    // Byline
+  if (m.creator)   addRec(0x50, m.creator, 32);    // Byline (author)
 
   let iptc = concat(...records);
   // IPTC data must be even-length
@@ -257,11 +268,13 @@ function embedInPNG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
   // Build new text + XMP chunks
   const newChunks = [
     buildPNGiTXt('Title',               m.title),
+    buildPNGiTXt('Description',         m.description),
     buildPNGiTXt('Comment',             m.description),
     buildPNGiTXt('Keywords',            m.keywords.join(', ')),
     buildPNGiTXt('Software',            'PixelMind AI'),
     ...(m.copyright ? [buildPNGiTXt('Copyright', m.copyright)] : []),
     ...(m.creator   ? [buildPNGiTXt('Author',    m.creator)]   : []),
+    ...(m.rating    ? [buildPNGiTXt('Rating',    String(m.rating))] : []),
     buildPNGiTXt('XML:com.adobe.xmp',  buildXMPXML(m)), // Photoshop XMP
   ];
 
@@ -358,7 +371,7 @@ function getImageDimensions(file: File): Promise<{ w: number; h: number }> {
   });
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+// ─── Public: single image embed ───────────────────────────────────────────────
 
 export async function embedMetadata(
   file: File,
@@ -402,4 +415,101 @@ export function triggerDownload(blob: Blob, filename: string): void {
   const a   = document.createElement('a');
   a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+// ─── ZIP builder (STORE method, no compression) ───────────────────────────────
+
+function buildZIP(files: Array<{ name: string; data: Uint8Array }>): Uint8Array {
+  const now     = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+  const locals:   Uint8Array[] = [];
+  const centrals: Uint8Array[] = [];
+  let localOffset = 0;
+
+  for (const file of files) {
+    const nameBytes = ENC.encode(file.name);
+    const checksum  = crc32(file.data);
+    const size      = file.data.length;
+
+    const local = concat(
+      new Uint8Array([0x50, 0x4B, 0x03, 0x04]), // PK local header sig
+      u16LE(20), u16LE(0), u16LE(0),             // version needed, flags, STORE
+      u16LE(dosTime), u16LE(dosDate),
+      u32LE(checksum), u32LE(size), u32LE(size),
+      u16LE(nameBytes.length), u16LE(0),         // name len, extra len
+      nameBytes, file.data,
+    );
+
+    const central = concat(
+      new Uint8Array([0x50, 0x4B, 0x01, 0x02]), // PK central dir sig
+      u16LE(20), u16LE(20), u16LE(0), u16LE(0), // version by/needed, flags, STORE
+      u16LE(dosTime), u16LE(dosDate),
+      u32LE(checksum), u32LE(size), u32LE(size),
+      u16LE(nameBytes.length), u16LE(0), u16LE(0), // name len, extra len, comment len
+      u16LE(0), u16LE(0), u32LE(0),               // disk start, int attrs, ext attrs
+      u32LE(localOffset),
+      nameBytes,
+    );
+
+    locals.push(local);
+    centrals.push(central);
+    localOffset += local.length;
+  }
+
+  const localData   = concat(...locals);
+  const centralData = concat(...centrals);
+
+  const eocd = concat(
+    new Uint8Array([0x50, 0x4B, 0x05, 0x06]), // PK end-of-central-dir sig
+    u16LE(0), u16LE(0),                        // disk num, CD start disk
+    u16LE(files.length), u16LE(files.length),  // entries on disk, total entries
+    u32LE(centralData.length),
+    u32LE(localData.length),                   // offset of central dir
+    u16LE(0),                                  // comment length
+  );
+
+  return concat(localData, centralData, eocd);
+}
+
+// ─── Public: ZIP package export ───────────────────────────────────────────────
+
+export interface ZIPItem {
+  imageFile: File;
+  meta: EmbedMetadata;
+  txtContent: string;
+}
+
+export async function buildZIPPackage(
+  items: ZIPItem[],
+  csvContent: string,
+  onProgress?: (done: number, total: number) => void,
+): Promise<Blob> {
+  const files: Array<{ name: string; data: Uint8Array }> = [];
+
+  for (let i = 0; i < items.length; i++) {
+    onProgress?.(i, items.length);
+    const { imageFile, meta, txtContent } = items[i];
+    const baseName = imageFile.name.replace(/\.[^.]+$/, '');
+
+    // Embed metadata into image (fall back to original on failure)
+    let imageData: Uint8Array;
+    try {
+      const { blob } = await embedMetadata(imageFile, meta);
+      imageData = new Uint8Array(await blob.arrayBuffer());
+    } catch {
+      imageData = new Uint8Array(await imageFile.arrayBuffer());
+    }
+
+    files.push({ name: imageFile.name,              data: imageData });
+    files.push({ name: `${baseName}_metadata.txt`,  data: ENC.encode(txtContent) });
+  }
+
+  // Single CSV for all images
+  files.push({ name: 'metadata_all.csv', data: ENC.encode(csvContent) });
+
+  onProgress?.(items.length, items.length);
+  const zipBytes = buildZIP(files);
+  return new Blob([new Uint8Array(zipBytes)], { type: 'application/zip' });
 }

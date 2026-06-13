@@ -11,12 +11,14 @@ import { callAI, imageToBase64ForAI, extractJSON } from '../../services/aiServic
 import {
   Upload, Image, Download, RefreshCw, Settings, ChevronDown,
   ChevronUp, Trash2, Copy, X, AlertCircle, Type, AlignLeft, Hash, Zap,
-  ZoomIn, Maximize2, Plus, RotateCcw, Sparkles, FileDown, FileText, Layers
+  ZoomIn, Maximize2, Plus, RotateCcw, Sparkles, FileDown, FileText, Layers,
+  Star, User, Archive
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
 import { useAdminStore } from '../../store/useAdminStore';
-import { embedMetadata, triggerDownload } from '../../services/metadataEmbedService';
+import { embedMetadata, triggerDownload, buildZIPPackage } from '../../services/metadataEmbedService';
+import type { ZIPItem } from '../../services/metadataEmbedService';
 
 const MARKETPLACES = [
   { id: 'Adobe Stock', icon: '🅐', color: '#FF0000' },
@@ -62,10 +64,13 @@ interface ImageFile {
   keywords?: string[];
   category?: string;
   commercialIntent?: string;
-  metadataScore?: number;   // overall_score
+  metadataScore?: number;
   titleScore?: number;
   descScore?: number;
   keywordsScore?: number;
+  rating?: number;       // 1–5 star rating per image
+  userAuthor?: string;   // per-image author override
+  userCopyright?: string; // per-image copyright override
 }
 
 interface ParsedMetadata {
@@ -278,9 +283,10 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const guestGenCount = useRef(0);
   const { getTemplate } = usePromptStore();
   const { cmsContent } = useAdminStore();
-  const embedEnabled  = (cmsContent['meta_embed_enabled']   ?? 'true') === 'true';
+  const embedEnabled   = (cmsContent['meta_embed_enabled']   ?? 'true') === 'true';
   const embedCopyright = cmsContent['meta_embed_copyright'] ?? '';
   const embedCreator   = cmsContent['meta_embed_creator']   ?? '';
+  const zipEnabled     = (cmsContent['meta_zip_enabled']    ?? 'true') === 'true';
   const metadataCache = useRef<Map<string, Partial<ImageFile>>>(new Map());
   const getCacheKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -293,6 +299,9 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const [categoryDropOpen, setCategoryDropOpen] = useState<string | null>(null); // imageId
   const [embeddingIds, setEmbeddingIds] = useState<Set<string>>(new Set());
   const [embedAllLoading, setEmbedAllLoading] = useState(false);
+  const [zipLoading, setZipLoading] = useState(false);
+  const [globalAuthor, setGlobalAuthor] = useState('');
+  const [globalCopyright, setGlobalCopyright] = useState('');
   const exportRef = useRef<HTMLDivElement>(null);
   const categoryDropRef = useRef<HTMLDivElement>(null);
   const wasGenerating = useRef(false);
@@ -458,18 +467,51 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     return parts.join(' ');
   };
 
-  const exportCSV = () => {
-    const done = images.filter(i => i.status === 'done');
-    if (!done.length) { toast.error('No data to export'); return; }
-    const headers = ['File Name', 'Title', 'Description', 'Keywords', 'Category'];
-    const rows = done.map(img => [
+  const getEffectiveAuthor = (img: ImageFile): string =>
+    (img.userAuthor !== undefined ? img.userAuthor : globalAuthor) || embedCreator || '';
+
+  const getEffectiveCopyright = (img: ImageFile): string =>
+    (img.userCopyright !== undefined ? img.userCopyright : globalCopyright) || embedCopyright || '';
+
+  const buildEmbedMeta = (img: ImageFile) => ({
+    title:       applyAffixes(img.title || ''),
+    description: img.description || '',
+    keywords:    img.keywords || [],
+    copyright:   getEffectiveCopyright(img) || undefined,
+    creator:     getEffectiveAuthor(img) || undefined,
+    rating:      img.rating,
+  });
+
+  const buildTXTContent = (img: ImageFile): string => [
+    `File: ${img.file.name}`,
+    `Title: ${applyAffixes(img.title || '')}`,
+    `Description: ${img.description || ''}`,
+    `Keywords: ${(img.keywords || []).join(', ')}`,
+    `Category: ${img.category || ''}`,
+    ...(getEffectiveAuthor(img) ? [`Author: ${getEffectiveAuthor(img)}`] : []),
+    ...(getEffectiveCopyright(img) ? [`Copyright: ${getEffectiveCopyright(img)}`] : []),
+    ...(img.rating ? [`Rating: ${'★'.repeat(img.rating)}${'☆'.repeat(5 - img.rating)} (${img.rating}/5)`] : []),
+  ].join('\n');
+
+  const buildCSVContent = (rows: ImageFile[]): string => {
+    const headers = ['File Name', 'Title', 'Description', 'Keywords', 'Category', 'Author', 'Copyright', 'Rating'];
+    const dataRows = rows.map(img => [
       `"${img.file.name.replace(/"/g, '""')}"`,
       `"${applyAffixes(img.title || '').replace(/"/g, '""')}"`,
       `"${(img.description || '').replace(/"/g, '""')}"`,
       `"${(img.keywords || []).join(', ')}"`,
       `"${img.category || ''}"`,
+      `"${getEffectiveAuthor(img).replace(/"/g, '""')}"`,
+      `"${getEffectiveCopyright(img).replace(/"/g, '""')}"`,
+      `"${img.rating ? `${img.rating}/5` : ''}"`,
     ]);
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    return [headers.join(','), ...dataRows.map(r => r.join(','))].join('\n');
+  };
+
+  const exportCSV = () => {
+    const done = images.filter(i => i.status === 'done');
+    if (!done.length) { toast.error('No data to export'); return; }
+    const csv = buildCSVContent(done);
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'metadata-export.csv'; a.click();
@@ -489,7 +531,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const exportTXT = () => {
     const done = images.filter(i => i.status === 'done');
     if (!done.length) { toast.error('No data to export'); return; }
-    const text = done.map(img => [`File: ${img.file.name}`, `Title: ${applyAffixes(img.title || '')}`, `Description: ${img.description}`, `Keywords: ${(img.keywords || []).join(', ')}`, `Category: ${img.category}`, '---'].join('\n')).join('\n\n');
+    const text = done.map(img => buildTXTContent(img) + '\n---').join('\n\n');
     const blob = new Blob([text], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'metadata-export.txt'; a.click();
@@ -497,14 +539,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   };
 
   const downloadSingleTXT = (img: ImageFile) => {
-    const text = [
-      `File: ${img.file.name}`,
-      `Title: ${applyAffixes(img.title || '')}`,
-      `Description: ${img.description || ''}`,
-      `Keywords: ${(img.keywords || []).join(', ')}`,
-      `Category: ${img.category || ''}`,
-    ].join('\n');
-    const blob = new Blob([text], { type: 'text/plain' });
+    const blob = new Blob([buildTXTContent(img)], { type: 'text/plain' });
     triggerDownload(blob, `${img.file.name.replace(/\.[^.]+$/, '')}_metadata.txt`);
     toast.success('Metadata .TXT downloaded!');
   };
@@ -516,13 +551,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     try {
       const { blob, filename, warning } = await embedMetadata(
         img.file,
-        {
-          title:       applyAffixes(img.title || ''),
-          description: img.description || '',
-          keywords:    img.keywords || [],
-          copyright:   embedCopyright || undefined,
-          creator:     embedCreator   || undefined,
-        },
+        buildEmbedMeta(img),
         (stage) => {
           if (stage === 'embedding') toast.loading('Writing metadata into file…', { id: tid });
         },
@@ -550,13 +579,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
       const img = done[i];
       try {
         toast.loading(`Embedding ${i + 1}/${done.length}: ${img.file.name}`, { id: tid });
-        const { blob, filename, warning } = await embedMetadata(img.file, {
-          title:       applyAffixes(img.title || ''),
-          description: img.description || '',
-          keywords:    img.keywords || [],
-          copyright:   embedCopyright || undefined,
-          creator:     embedCreator   || undefined,
-        });
+        const { blob, filename, warning } = await embedMetadata(img.file, buildEmbedMeta(img));
         if (warning) toast(warning, { icon: '⚠️', duration: 4000 });
         triggerDownload(blob, filename);
         success++;
@@ -566,6 +589,33 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     toast.dismiss(tid);
     toast.success(`${success}/${done.length} images embedded & downloaded!`);
     setEmbedAllLoading(false);
+  };
+
+  const downloadAllAsZIP = async () => {
+    if (!embedEnabled) { toast.error('Metadata embedding is disabled by admin'); return; }
+    const done = images.filter(i => i.status === 'done');
+    if (!done.length) { toast.error('No completed images to package'); return; }
+    setZipLoading(true);
+    const tid = toast.loading(`Preparing ZIP for ${done.length} image${done.length !== 1 ? 's' : ''}…`);
+    try {
+      const items: ZIPItem[] = done.map(img => ({
+        imageFile:  img.file,
+        meta:       buildEmbedMeta(img),
+        txtContent: buildTXTContent(img),
+      }));
+      const csvContent = '﻿' + buildCSVContent(done);
+      const zipBlob = await buildZIPPackage(items, csvContent, (d, t) => {
+        toast.loading(`Packaging ${d + 1}/${t}: ${done[d]?.file.name ?? ''}…`, { id: tid });
+      });
+      toast.dismiss(tid);
+      triggerDownload(zipBlob, 'PixelMind_Metadata_Export.zip');
+      toast.success(`ZIP with ${done.length} image${done.length !== 1 ? 's' : ''} downloaded!`);
+    } catch (err) {
+      toast.dismiss(tid);
+      toast.error(err instanceof Error ? err.message : 'ZIP generation failed');
+    } finally {
+      setZipLoading(false);
+    }
   };
 
   const doneCount = images.filter(i => i.status === 'done').length;
@@ -755,6 +805,34 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                     </div>
                   )}
                 </div>
+
+                <div className="h-px bg-gray-100 dark:bg-[#0d1030]" />
+
+                {/* Author & Copyright — global defaults */}
+                <div className="space-y-2.5">
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                    <User size={11} className="text-[#6366F1]" /> Author &amp; Copyright
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Author name…"
+                    value={globalAuthor}
+                    onChange={e => setGlobalAuthor(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#0d1030] text-gray-800 dark:text-gray-200 outline-none focus:border-[#6366F1] transition-colors"
+                  />
+                  <input
+                    type="text"
+                    placeholder="© 2026 Your Name…"
+                    value={globalCopyright}
+                    onChange={e => setGlobalCopyright(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#0d1030] text-gray-800 dark:text-gray-200 outline-none focus:border-[#6366F1] transition-colors"
+                  />
+                  {(globalAuthor || globalCopyright) && (
+                    <p className="text-[10px] text-[#6366F1] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#6366F1]/10 px-2 py-1.5 rounded-lg">
+                      Embedded into all images — override per-image below
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </Card>
@@ -823,6 +901,19 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {/* ZIP Download button */}
+              {doneCount > 0 && zipEnabled && embedEnabled && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={zipLoading}
+                  icon={<Archive size={13} />}
+                  onClick={downloadAllAsZIP}
+                >
+                  {zipLoading ? 'Zipping…' : `Download ZIP (${doneCount})`}
+                </Button>
+              )}
+
               {/* Embed All button */}
               {doneCount > 0 && embedEnabled && (
                 <Button
@@ -1315,7 +1406,52 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
 
                         {/* ── EMBED & DOWNLOAD bar ── */}
                         {isDone && embedEnabled && (
-                          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-[#EEF2FF]/40 dark:from-[#0d1030]/60 dark:to-[#6366F1]/5 border-t border-gray-100 dark:border-[#232650]">
+                          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-[#EEF2FF]/40 dark:from-[#0d1030]/60 dark:to-[#6366F1]/5 border-t border-gray-100 dark:border-[#232650] space-y-2.5">
+
+                            {/* Rating + Author + Copyright row */}
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              {/* Star rating */}
+                              <div className="flex items-center gap-0.5 shrink-0" title="Click a star to rate">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <button
+                                    key={star}
+                                    onClick={() => setImages(prev => prev.map(i =>
+                                      i.id === img.id ? { ...i, rating: i.rating === star ? undefined : star } : i
+                                    ))}
+                                    className={`p-0.5 transition-colors ${(img.rating ?? 0) >= star ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'} hover:text-amber-400`}
+                                  >
+                                    <Star size={13} fill={(img.rating ?? 0) >= star ? 'currentColor' : 'none'} />
+                                  </button>
+                                ))}
+                                {img.rating && (
+                                  <span className="ml-0.5 text-[10px] text-amber-500 font-semibold">{img.rating}★</span>
+                                )}
+                              </div>
+
+                              {/* Author inline */}
+                              <input
+                                type="text"
+                                placeholder={embedCreator || 'Author name…'}
+                                value={img.userAuthor !== undefined ? img.userAuthor : globalAuthor}
+                                onChange={e => setImages(prev => prev.map(i =>
+                                  i.id === img.id ? { ...i, userAuthor: e.target.value } : i
+                                ))}
+                                className="flex-1 min-w-[90px] px-2 py-1 text-[11px] rounded-lg border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#191c40] text-gray-700 dark:text-gray-300 outline-none focus:border-[#6366F1] transition-colors"
+                              />
+
+                              {/* Copyright inline */}
+                              <input
+                                type="text"
+                                placeholder={embedCopyright || '© Copyright…'}
+                                value={img.userCopyright !== undefined ? img.userCopyright : globalCopyright}
+                                onChange={e => setImages(prev => prev.map(i =>
+                                  i.id === img.id ? { ...i, userCopyright: e.target.value } : i
+                                ))}
+                                className="flex-1 min-w-[100px] px-2 py-1 text-[11px] rounded-lg border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#191c40] text-gray-700 dark:text-gray-300 outline-none focus:border-[#6366F1] transition-colors"
+                              />
+                            </div>
+
+                            {/* File info + download buttons */}
                             <div className="flex items-center justify-between flex-wrap gap-2">
                               <div className="flex items-center gap-2 text-[10px] text-gray-400 min-w-0">
                                 <span className="px-1.5 py-0.5 rounded-md font-bold bg-[#6366F1]/10 text-[#6366F1] dark:text-[#A5B4FC] uppercase tracking-wide">
@@ -1323,7 +1459,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                                 </span>
                                 <span className="font-medium text-gray-500 dark:text-gray-400">{(img.file.size / (1024 * 1024)).toFixed(1)} MB</span>
                                 <span className="text-gray-300 dark:text-gray-600">·</span>
-                                <span>{img.keywords?.length || 0} keywords</span>
+                                <span>{img.keywords?.length || 0} kw</span>
                                 {embeddingIds.has(img.id) && (
                                   <span className="flex items-center gap-1 text-[#6366F1] font-medium">
                                     <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-ping" />
@@ -1445,6 +1581,23 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                     <p className="text-[11px] text-gray-400">XMP · IPTC · EXIF — zero quality loss</p>
                   </div>
                   <FileDown size={13} className="opacity-30 group-hover:opacity-100 transition-opacity flex-shrink-0 text-[#6366F1]" />
+                </button>
+              )}
+
+              {/* ZIP download option */}
+              {zipEnabled && embedEnabled && (
+                <button
+                  onClick={() => { setShowExportModal(false); downloadAllAsZIP(); }}
+                  className="w-full mt-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-700/40 bg-gradient-to-br from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10 hover:shadow-md hover:scale-[1.01] transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600">
+                    <Archive size={16} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Download All as ZIP</p>
+                    <p className="text-[11px] text-gray-400">Embedded images + .TXT + CSV in one package</p>
+                  </div>
+                  <Download size={13} className="opacity-30 group-hover:opacity-100 transition-opacity flex-shrink-0 text-emerald-500" />
                 </button>
               )}
 

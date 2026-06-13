@@ -25,6 +25,7 @@ export const MetadataManagerPage: React.FC = () => {
   const [guestAllowed, setGuestAllowed] = useState(get('meta_guest_allowed', 'true') === 'true');
   const [bulkAllowed, setBulkAllowed] = useState(get('meta_bulk_allowed', 'true') === 'true');
   const [embedEnabled, setEmbedEnabled] = useState(get('meta_embed_enabled', 'true') === 'true');
+  const [zipEnabled,   setZipEnabled]   = useState(get('meta_zip_enabled',   'true') === 'true');
   const [embedSettings, setEmbedSettings] = useState({
     meta_embed_copyright: get('meta_embed_copyright', ''),
     meta_embed_creator:   get('meta_embed_creator', ''),
@@ -44,6 +45,7 @@ export const MetadataManagerPage: React.FC = () => {
     bulkUpdateCMSContent({
       ...embedSettings,
       meta_embed_enabled: embedEnabled ? 'true' : 'false',
+      meta_zip_enabled:   zipEnabled   ? 'true' : 'false',
     });
     toast.success('Embedding settings saved');
   };
@@ -102,12 +104,21 @@ export const MetadataManagerPage: React.FC = () => {
           <Button size="sm" icon={<Save size={14} />} onClick={saveEmbed}>Save</Button>
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#191c40] rounded-xl mb-4">
-          <div>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">Enable Metadata Embedding</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Allow users to embed XMP + IPTC metadata directly into image files</p>
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex-1 flex items-center justify-between p-3 bg-gray-50 dark:bg-[#191c40] rounded-xl">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Metadata Embedding</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Embed XMP + IPTC into image files</p>
+            </div>
+            <Toggle checked={embedEnabled} onChange={setEmbedEnabled} label="" />
           </div>
-          <Toggle checked={embedEnabled} onChange={setEmbedEnabled} label="" />
+          <div className="flex-1 flex items-center justify-between p-3 bg-gray-50 dark:bg-[#191c40] rounded-xl">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">ZIP Export</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bundle images + TXT + CSV in ZIP</p>
+            </div>
+            <Toggle checked={zipEnabled} onChange={setZipEnabled} label="" />
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4 mb-4">
