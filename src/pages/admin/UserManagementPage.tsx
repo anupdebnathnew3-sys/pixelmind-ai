@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 type UserForm = Omit<AdminUser, 'id'>;
 
 const BLANK: UserForm = {
-  name: '', email: '', plan: 'free', credits: 500,
+  name: '', email: '', plan: 'free', credits: 1000,
   status: 'active', role: 'user', joined: new Date().toISOString().slice(0, 10),
   lastActive: 'Just now', totalUsage: 0,
 };

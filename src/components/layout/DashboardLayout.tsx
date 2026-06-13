@@ -18,7 +18,7 @@ const MODAL_COPY = {
     title: 'Save Your Generated Content',
     body: 'Create a free account to save your history, access all tools, and organize your projects.',
     cta: 'Create Free Account',
-    sub: 'No credit card required • 500 free credits on signup',
+    sub: 'No credit card required • 1,000 free credits on signup',
     dismissLabel: 'Continue as Guest',
   },
   milestone: {
@@ -28,7 +28,7 @@ const MODAL_COPY = {
     title: "You're Getting Great Results!",
     body: "You've generated several outputs. Create a free account to save everything, track history, and unlock premium features.",
     cta: "Create Free Account — It's Free",
-    sub: 'No credit card required • 500 free credits on signup',
+    sub: 'No credit card required • 1,000 free credits on signup',
     dismissLabel: 'Continue as Guest',
   },
   exit: {
@@ -46,8 +46,8 @@ const MODAL_COPY = {
     iconBg: 'bg-amber-50 dark:bg-amber-900/20',
     accentBar: 'from-amber-400 via-orange-400 to-rose-400',
     title: "You've Used All 50 Free Credits",
-    body: "Create a free account to receive 500 credits instantly — 10× more than the guest allocation. No credit card required.",
-    cta: 'Get 500 Free Credits →',
+    body: "Create a free account to receive 1,000 credits instantly — 20× more than the guest allocation. No credit card required.",
+    cta: 'Get 1,000 Free Credits →',
     sub: 'Upgrade to Premium for unlimited access',
     dismissLabel: 'Not now',
   },
@@ -145,9 +145,9 @@ const GuestBanner: React.FC = () => {
         <Zap size={14} className="flex-shrink-0" />
         <span className="font-medium truncate">
           {isEmpty
-            ? 'No credits remaining — create a free account to get 500 more'
+            ? 'No credits remaining — create a free account to get 1,000 more'
             : isLow
-              ? `Only ${guestCredits} guest credits left — sign up for 500 free credits`
+              ? `Only ${guestCredits} guest credits left — sign up for 1,000 free credits`
               : `Guest Mode · ${guestCredits} free credits remaining`
           }
         </span>

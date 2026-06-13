@@ -150,7 +150,7 @@ export const useStore = create<AppState>()(
       setAiMode: (mode) => set({ aiMode: mode }),
 
       // Credits
-      credits: 500,
+      credits: 1000,
       setCredits: (c) => set({ credits: c }),
       deductCredits: (amount) => set((s) => ({ credits: Math.max(0, s.credits - amount) })),
 

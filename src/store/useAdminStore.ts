@@ -298,7 +298,7 @@ const DEFAULT_USERS: AdminUser[] = [
   { id: '2', name: 'Bob Kumar', email: 'bob@example.com', plan: 'free', credits: 150, status: 'active', role: 'user', joined: '2024-03-22', lastActive: '1 hour ago', totalUsage: 350 },
   { id: '3', name: 'Carol Smith', email: 'carol@example.com', plan: 'enterprise', credits: 99999, status: 'active', role: 'user', joined: '2023-11-08', lastActive: '5 min ago', totalUsage: 8920 },
   { id: '4', name: 'David Lee', email: 'david@example.com', plan: 'pro', credits: 0, status: 'suspended', role: 'user', joined: '2024-05-14', lastActive: '3 days ago', totalUsage: 560 },
-  { id: '5', name: 'Emma Wilson', email: 'emma@example.com', plan: 'free', credits: 500, status: 'active', role: 'user', joined: '2024-11-01', lastActive: '30 min ago', totalUsage: 45 },
+  { id: '5', name: 'Emma Wilson', email: 'emma@example.com', plan: 'free', credits: 1000, status: 'active', role: 'user', joined: '2024-11-01', lastActive: '30 min ago', totalUsage: 45 },
   { id: '6', name: 'Frank Chen', email: 'frank@example.com', plan: 'pro', credits: 2100, status: 'active', role: 'user', joined: '2024-02-28', lastActive: '2 hours ago', totalUsage: 2800 },
   { id: '7', name: 'Admin User', email: 'admin@pixelmind.ai', plan: 'enterprise', credits: 99999, status: 'active', role: 'admin', joined: '2023-01-01', lastActive: 'Just now', totalUsage: 0 },
 ];
@@ -320,7 +320,7 @@ const DEFAULT_FEATURED_TOOLS: FeaturedTool[] = [
 
 const DEFAULT_SUBSCRIPTIONS: AdminSubscription[] = [
   { id: '1', userName: 'Alice Johnson', email: 'alice@example.com', plan: 'pro', status: 'active', amount: 29, billingCycle: 'monthly', startDate: '2024-01-15', nextBilling: '2026-07-15', creditsPerMonth: 5000 },
-  { id: '2', userName: 'Bob Kumar', email: 'bob@example.com', plan: 'free', status: 'active', amount: 0, billingCycle: 'monthly', startDate: '2024-03-22', nextBilling: '—', creditsPerMonth: 500 },
+  { id: '2', userName: 'Bob Kumar', email: 'bob@example.com', plan: 'free', status: 'active', amount: 0, billingCycle: 'monthly', startDate: '2024-03-22', nextBilling: '—', creditsPerMonth: 1000 },
   { id: '3', userName: 'Carol Smith', email: 'carol@example.com', plan: 'enterprise', status: 'active', amount: 99, billingCycle: 'annual', startDate: '2023-11-08', nextBilling: '2026-11-08', creditsPerMonth: 99999 },
   { id: '4', userName: 'David Lee', email: 'david@example.com', plan: 'pro', status: 'past_due', amount: 29, billingCycle: 'monthly', startDate: '2024-05-14', nextBilling: '2026-06-14', creditsPerMonth: 5000 },
   { id: '5', userName: 'Emma Wilson', email: 'emma@example.com', plan: 'pro', status: 'trialing', amount: 29, billingCycle: 'monthly', startDate: '2026-06-01', nextBilling: '2026-06-15', creditsPerMonth: 5000 },

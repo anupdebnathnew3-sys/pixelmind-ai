@@ -87,7 +87,7 @@ export const LoginPage: React.FC = () => {
         email,
         role: 'user',
         plan: 'free',
-        credits: 500,
+        credits: 1000,
         createdAt: new Date().toISOString(),
         emailVerified: true,
         notificationsCount: 2,
@@ -116,7 +116,7 @@ export const LoginPage: React.FC = () => {
         email: user.email || '',
         role: 'user',
         plan: 'free',
-        credits: 500,
+        credits: 1000,
         createdAt: new Date().toISOString(),
         emailVerified: user.emailVerified,
         notificationsCount: 0,
@@ -159,7 +159,7 @@ export const LoginPage: React.FC = () => {
                 { label: 'AI Providers', value: '8+' },
                 { label: 'Marketplaces', value: '7' },
                 { label: 'Tools Available', value: '10+' },
-                { label: 'Free Credits', value: '500' },
+                { label: 'Free Credits', value: '1,000' },
               ].map(item => (
                 <div key={item.label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
                   <p className="text-2xl font-bold">{item.value}</p>

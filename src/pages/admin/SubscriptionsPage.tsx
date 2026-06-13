@@ -8,7 +8,7 @@ import { CreditCard, TrendingUp, Users, DollarSign, Search, ChevronDown, X, Save
 import toast from 'react-hot-toast';
 
 const PLANS = [
-  { name: 'Free',       value: 'free',       price: 0,  credits: 500,   color: '#94a3b8' },
+  { name: 'Free',       value: 'free',       price: 0,  credits: 1000,  color: '#94a3b8' },
   { name: 'Pro',        value: 'pro',        price: 29, credits: 5000,  color: '#6366F1' },
   { name: 'Enterprise', value: 'enterprise', price: 99, credits: 99999, color: '#8B5CF6' },
 ];

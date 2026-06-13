@@ -187,7 +187,7 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
     if (pending.length === 0) { toast.error('No images to process'); return; }
 
     if (!isAuthenticated && guestCredits <= 0) {
-      toast.error('No guest credits remaining. Create a free account for 500 credits.');
+      toast.error('No guest credits remaining. Create a free account for 1,000 credits.');
       return;
     }
 
@@ -244,7 +244,7 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
             deductGuestCredit(); incrementGenerations();
             guestGenCount.current += 1;
             if (guestGenCount.current % 3 === 0) {
-              toast('Sign in to save your prompts and get 500 free credits →', { icon: '👋', duration: 4000 });
+              toast('Sign in to save your prompts and get 1,000 free credits →', { icon: '👋', duration: 4000 });
             }
           }
           success++;
@@ -264,7 +264,7 @@ export const ImageToPromptPage: React.FC<ImageToPromptPageProps> = ({ guestAllow
   // ── Regenerate one ─────────────────────────────────────────────────────────
   const regenerateOne = async (imgId: string) => {
     if (!isAuthenticated && guestCredits <= 0) {
-      toast.error('No guest credits remaining. Create a free account for 500 credits.');
+      toast.error('No guest credits remaining. Create a free account for 1,000 credits.');
       return;
     }
     const img = images.find(i => i.id === imgId);

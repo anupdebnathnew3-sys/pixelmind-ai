@@ -41,7 +41,7 @@ export const RegisterPage: React.FC = () => {
       email: form.email,
       role: 'user',
       plan: 'free',
-      credits: 500,
+      credits: 1000,
       createdAt: new Date().toISOString(),
       emailVerified: false,
       notificationsCount: 1,
@@ -105,7 +105,7 @@ export const RegisterPage: React.FC = () => {
             </p>
             <div className="space-y-2.5">
               {[
-                '500 free credits on signup',
+                '1,000 free credits on signup',
                 'Access to all AI tools',
                 'No credit card required',
                 'Cancel anytime',
@@ -159,7 +159,7 @@ export const RegisterPage: React.FC = () => {
                   email: user.email || '',
                   role: 'user',
                   plan: 'free',
-                  credits: 500,
+                  credits: 1000,
                   createdAt: new Date().toISOString(),
                   emailVerified: user.emailVerified,
                   notificationsCount: 0,

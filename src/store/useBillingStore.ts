@@ -129,7 +129,7 @@ const DEFAULT_PLANS: Plan[] = [
     tagline: 'Get started with basic tools and monthly credits',
     priceBDT: 0,
     billingCycle: 'free',
-    creditsPerMonth: 500,
+    creditsPerMonth: 1000,
     monthlyPriceBDT: 0,
     monthlyOriginalBDT: 0,
     yearlyPriceBDT: 0,
@@ -141,7 +141,7 @@ const DEFAULT_PLANS: Plan[] = [
     isEnabled: true,
     color: '#10B981',
     features: [
-      { text: '500 credits per month (auto reset)', included: true },
+      { text: '1,000 credits per month (auto reset)', included: true },
       { text: 'All core tools access', included: true },
       { text: 'Personal API key support', included: true },
       { text: 'Basic AI generation quality', included: true },
@@ -569,7 +569,7 @@ export const useBillingStore = create<BillingState>()(
         if (fromVersion < 2) {
           // Merge new pricing/credit fields into any existing plans
           const v2patches: Record<string, Partial<Plan>> = {
-            free:  { creditsPerMonth: 500,  monthlyPriceBDT: 0,    monthlyOriginalBDT: 0,    yearlyPriceBDT: 0,     yearlyOriginalBDT: 0 },
+            free:  { creditsPerMonth: 1000, monthlyPriceBDT: 0,    monthlyOriginalBDT: 0,    yearlyPriceBDT: 0,     yearlyOriginalBDT: 0 },
             pro:   { creditsPerMonth: 5000, monthlyPriceBDT: 349,  monthlyOriginalBDT: 499,  yearlyPriceBDT: 4399,  yearlyOriginalBDT: 5988 },
             max:   { creditsPerMonth: -1,   monthlyPriceBDT: 1749, monthlyOriginalBDT: 2499, yearlyPriceBDT: 21999, yearlyOriginalBDT: 29988 },
           };
@@ -587,7 +587,7 @@ export const useBillingStore = create<BillingState>()(
               monthlyPriceBDT: 0, monthlyOriginalBDT: 0,
               yearlyPriceBDT: 0,  yearlyOriginalBDT: 0,
               features: [
-                { text: '500 credits per month (auto reset)', included: true },
+                { text: '1,000 credits per month (auto reset)', included: true },
                 { text: 'All core tools access', included: true },
                 { text: 'Personal API key support', included: true },
                 { text: 'Basic AI generation quality', included: true },

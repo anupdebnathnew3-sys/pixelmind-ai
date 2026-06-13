@@ -66,7 +66,7 @@ const PLAN_VISUAL: Record<string, {
     monthlySubtitle: 'Everything you need to get started. No credit card.',
     yearlySubtitle: 'Always free — no commitment required.',
     monthlyFeatures: [
-      '500 credits / month (auto reset)',
+      '1,000 credits / month (auto reset)',
       'All core tools access',
       'Personal API key support',
       'Basic AI generation quality',
@@ -74,7 +74,7 @@ const PLAN_VISUAL: Record<string, {
       'Community support',
     ],
     yearlyFeatures: [
-      '500 credits / month for 12 months',
+      '1,000 credits / month for 12 months',
       'All core tools access',
       'Personal API key support',
       'API management dashboard',
@@ -342,7 +342,7 @@ const FAQ = [
 // ─── Comparison table ─────────────────────────────────────────────────────────
 
 const COMPARISON: { feature: string; free: boolean | string; pro: boolean | string; max: boolean | string }[] = [
-  { feature: 'Monthly credits',              free: '500',   pro: '5,000', max: 'Unlimited'  },
+  { feature: 'Monthly credits',              free: '1,000', pro: '5,000', max: 'Unlimited'  },
   { feature: 'All tools access',             free: true,    pro: true,    max: true         },
   { feature: 'Personal API keys',            free: true,    pro: true,    max: true         },
   { feature: 'Platform API (no key needed)', free: false,   pro: true,    max: true         },

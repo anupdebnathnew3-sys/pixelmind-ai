@@ -52,7 +52,7 @@ export const DashboardPage: React.FC = () => {
   const { tools: adminTools } = useAdminStore();
   const enabledPathSet = new Set(adminTools.filter(t => t.enabled).map(t => `/tools/${t.id}`));
   const quickTools = ALL_QUICK_TOOLS.filter(t => enabledPathSet.has(t.path));
-  const maxCredits = user?.plan === 'enterprise' ? 99999 : user?.plan === 'pro' ? 5000 : 500;
+  const maxCredits = user?.plan === 'enterprise' ? 99999 : user?.plan === 'pro' ? 5000 : 1000;
 
   return (
     <DashboardLayout>

@@ -111,7 +111,7 @@ const VideoSection: React.FC = () => {
 const FAQS = [
   {
     q: 'Do I need to create an account to use the tools?',
-    a: 'No â€” both AI Metadata Generator and Image to Prompt Generator are available in Guest Mode. You can generate immediately without signing up. Creating an account lets you save your history, access all tools, and get 500 free credits.',
+    a: 'No â€” both AI Metadata Generator and Image to Prompt Generator are available in Guest Mode. You can generate immediately without signing up. Creating an account lets you save your history, access all tools, and get 1,000 free credits.',
   },
   {
     q: 'What AI platforms does Image to Prompt support?',
@@ -131,7 +131,7 @@ const FAQS = [
   },
   {
     q: 'How are credits used?',
-    a: 'Each AI generation uses 1 credit. Free accounts receive 500 credits on signup. Credits never expire. Additional credit packs are available in the Billing section.',
+    a: 'Each AI generation uses 1 credit. Free accounts receive 1,000 credits on signup. Credits never expire. Additional credit packs are available in the Billing section.',
   },
   {
     q: 'Can I use my own AI API key?',
@@ -264,7 +264,7 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-center gap-5 text-sm text-[#71717A]">
             {[
               'No account needed',
-              '500 free credits on signup',
+              '1,000 free credits on signup',
               'No credit card required',
             ].map(t => (
               <div key={t} className="flex items-center gap-1.5">
@@ -328,7 +328,7 @@ export const HomePage: React.FC = () => {
               </div>
               <div className="text-left">
                 <p className="text-sm font-bold text-[#6366F1] dark:text-[#A5B4FC]">50 Free Guest Credits â€” No Signup Needed</p>
-                <p className="text-xs text-[#6366F1]/70 dark:text-[#A5B4FC]/60 mt-0.5">Create a free account to get 500 credits Â· No credit card required</p>
+                <p className="text-xs text-[#6366F1]/70 dark:text-[#A5B4FC]/60 mt-0.5">Create a free account to get 1,000 credits Â· No credit card required</p>
               </div>
             </div>
           </div>
@@ -466,7 +466,7 @@ export const HomePage: React.FC = () => {
           <p className="text-center text-sm text-gray-400 dark:text-[#52525B] mt-8">
             Enjoyed the tools?{' '}
             <Link to="/register" className="text-[#6366F1] hover:underline font-medium">Create a free account</Link>
-            {' '}to get 500 credits and save your work.
+            {' '}to get 1,000 credits and save your work.
           </p>
         </div>
       </section>
@@ -798,7 +798,7 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-[#71717A]">
             {[
               { icon: <Shield size={13} className="text-[#A5B4FC]" />, text: 'Images never stored' },
-              { icon: <CheckCircle size={13} className="text-green-400" />, text: '500 free credits on signup' },
+              { icon: <CheckCircle size={13} className="text-green-400" />, text: '1,000 free credits on signup' },
               { icon: <TrendingUp size={13} className="text-[#A5B4FC]" />, text: 'New tools added regularly' },
             ].map(({ icon, text }) => (
               <div key={text} className="flex items-center gap-1.5">

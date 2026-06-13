@@ -349,7 +349,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
 
   const processImage = async (img: ImageFile, field: 'title' | 'description' | 'keywords' | 'all') => {
     if (!isAuthenticated && guestCredits <= 0) {
-      toast.error('No guest credits remaining. Create a free account for 500 credits.');
+      toast.error('No guest credits remaining. Create a free account for 1,000 credits.');
       return;
     }
     setImages(prev => prev.map(i => i.id === img.id ? { ...i, status: 'processing', processingField: field, errorMsg: undefined } : i));
@@ -362,7 +362,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
         deductGuestCredit(); incrementGenerations();
         guestGenCount.current += 1;
         if (guestGenCount.current % 3 === 0) {
-          toast('Sign in to save your results and get 500 free credits →', { icon: '👋', duration: 4000 });
+          toast('Sign in to save your results and get 1,000 free credits →', { icon: '👋', duration: 4000 });
         }
       }
     } catch (err) {
@@ -374,7 +374,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
 
   const generateAll = async () => {
     if (!isAuthenticated && guestCredits <= 0) {
-      toast.error('No guest credits remaining. Create a free account for 500 credits.');
+      toast.error('No guest credits remaining. Create a free account for 1,000 credits.');
       return;
     }
     const pending = images.filter(img => img.status !== 'done');
@@ -427,7 +427,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
             deductGuestCredit(); incrementGenerations();
             guestGenCount.current += 1;
             if (guestGenCount.current % 3 === 0) {
-              toast('Sign in to save your results and get 500 free credits →', { icon: '👋', duration: 4000 });
+              toast('Sign in to save your results and get 1,000 free credits →', { icon: '👋', duration: 4000 });
             }
           }
           success++;

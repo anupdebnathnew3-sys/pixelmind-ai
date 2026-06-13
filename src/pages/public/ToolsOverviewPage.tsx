@@ -304,7 +304,7 @@ export const ToolsOverviewPage: React.FC = () => {
           <div className="max-w-2xl mx-auto text-center">
             <div className="bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] rounded-3xl p-10 text-white">
               <h2 className="text-3xl font-extrabold mb-3">All {TOTAL_TOOLS} Tools. One Account.</h2>
-              <p className="text-white/75 mb-6">Sign up for free and get 500 credits monthly — no credit card required.</p>
+              <p className="text-white/75 mb-6">Sign up for free and get 1,000 credits monthly — no credit card required.</p>
               <Link
                 to="/register"
                 className="inline-flex items-center gap-2 bg-white text-[#6366F1] font-bold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition-colors"

@@ -24,7 +24,7 @@ export const CreditsSystemPage: React.FC = () => {
   const get = (k: string, fb = '') => cmsContent[k] ?? fb;
 
   const [plans, setPlans] = useState({
-    credit_free_plan: get('credit_free_plan', '500'),
+    credit_free_plan: get('credit_free_plan', '1000'),
     credit_pro_plan: get('credit_pro_plan', '5000'),
     credit_enterprise_plan: get('credit_enterprise_plan', '99999'),
     credit_guest_plan: get('credit_guest_plan', '50'),
