@@ -10,7 +10,7 @@ import {
   Palette, Shield, Scale, Navigation, Globe, Tag,
   DollarSign, Wallet, Lock, Bot, User, Image, Search, X,
   Home, Mail, PanelTop, Wrench, ImagePlus, Hash, Database,
-  BellRing, Megaphone
+  BellRing, Megaphone, Mic2, Type, Video
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -59,6 +59,11 @@ const adminSections: AdminSection[] = [
       { label: 'Slogan Generator', desc: 'Style options, credits and templates',    path: '/admin/tool/slogan',          icon: <MessageSquare size={14} /> },
       { label: 'Social Scheduler', desc: 'Platform integrations and posting rules', path: '/admin/tool/social',          icon: <Globe size={14} /> },
       { label: 'Word Counter',     desc: 'Display options and feature toggles',     path: '/admin/tool/word-counter',    icon: <Hash size={14} /> },
+      { label: 'Color Palette',    desc: 'Palette count, credits, dark preview',     path: '/admin/tool/color-palette',   icon: <Palette size={14} /> },
+      { label: 'Brand Voice',      desc: 'Slogan count, hooks, tone options',        path: '/admin/tool/brand-voice',     icon: <Mic2 size={14} /> },
+      { label: 'Font Pairing',     desc: 'Pairing sets, score display, Google links',path: '/admin/tool/font-pairing',    icon: <Type size={14} /> },
+      { label: 'Ad Copywriter',    desc: 'Platform management, variation count',     path: '/admin/tool/ad-copy',         icon: <Megaphone size={14} /> },
+      { label: 'Sales Script',     desc: 'Video lengths, platform versions',         path: '/admin/tool/sales-script',    icon: <Video size={14} /> },
     ],
   },
   {

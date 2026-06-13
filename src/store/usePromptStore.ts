@@ -196,6 +196,170 @@ Return: Caption text, hashtags (if requested), and a call-to-action.`,
     isEnabled: true,
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: 'default-color-palette',
+    toolId: 'color-palette',
+    name: 'AI Color Palette Generator',
+    description: 'Generates 3 professional brand color palettes from a concept description',
+    systemPrompt: `You are a world-class brand color strategist and visual identity designer with expertise in color theory, brand psychology, and digital design.
+You understand how colors evoke emotion, communicate brand values, and perform across digital and print media.
+Your palettes are always cohesive, accessible (sufficient contrast), and commercially viable.
+Return ONLY valid JSON — no markdown, no explanations, no extra text.`,
+    userPromptTemplate: `Generate exactly 3 distinct professional color palettes for the brand concept: "{{concept}}"
+
+Return ONLY valid JSON:
+{
+  "palettes": [
+    {
+      "name": "Palette name (2-3 words)",
+      "mood": "1-sentence brand mood description",
+      "colors": {
+        "primary": "#RRGGBB",
+        "secondary": "#RRGGBB",
+        "accent": "#RRGGBB",
+        "background": "#RRGGBB",
+        "text": "#RRGGBB"
+      }
+    }
+  ]
+}
+
+Rules: Valid 6-digit hex only. Sufficient text/background contrast. Each palette must be distinctly different.`,
+    isDefault: true,
+    isEnabled: true,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'default-brand-voice',
+    toolId: 'brand-voice',
+    name: 'Brand Voice & Slogan Matcher',
+    description: 'Creates brand voice, taglines, slogans, hooks, and positioning statements',
+    systemPrompt: `You are a world-class brand strategist, copywriter, and marketing consultant who has built brand identities for Fortune 500 companies and successful startups.
+You excel at crafting memorable brand voices, compelling taglines, and positioning statements that resonate deeply with target audiences.
+Your output is always creative, specific to the brand, and commercially effective.
+Return ONLY valid JSON — no markdown, no explanations, no extra text.`,
+    userPromptTemplate: `Create a comprehensive brand voice package for:
+
+Brand Name: {{brandName}}
+Industry: {{industry}}
+Personality: {{personality}}
+Target Audience: {{audience}}
+Tone: {{tone}}
+
+Return ONLY valid JSON:
+{
+  "brandVoice": "2-sentence voice & personality description",
+  "tagline": "Primary tagline (under 8 words)",
+  "slogans": ["slogan 1", "slogan 2", "slogan 3", "slogan 4", "slogan 5"],
+  "marketingHooks": ["hook 1", "hook 2", "hook 3"],
+  "positioningStatement": "For [audience], [brand] is the [category] that [benefit] because [reason]."
+}`,
+    isDefault: true,
+    isEnabled: true,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'default-font-pairing',
+    toolId: 'font-pairing',
+    name: 'AI Font Pairing Assistant',
+    description: 'Generates 3 professional Google Font pairing sets for any main font',
+    systemPrompt: `You are an expert typographer and UI/UX designer with deep knowledge of Google Fonts, type anatomy, readability principles, and design aesthetics.
+You create font pairings that are visually harmonious, functionally excellent, and appropriate for the intended design context.
+Your recommendations are always from the Google Fonts library and include practical usage guidance.
+Return ONLY valid JSON — no markdown, no explanations, no extra text.`,
+    userPromptTemplate: `Generate exactly 3 professional font pairing sets for the main font: "{{mainFont}}"
+
+Return ONLY valid JSON:
+{
+  "sets": [
+    {
+      "heading": "{{mainFont}}",
+      "subheading": "Google Font name",
+      "body": "Google Font name",
+      "style": "Design style (e.g., Modern Corporate)",
+      "explanation": "1-2 sentences on why these work together and best use cases",
+      "score": 90
+    }
+  ]
+}
+
+Rules: Google Fonts only. Each set must have a different design personality. Score 0-100 for harmony.`,
+    isDefault: true,
+    isEnabled: true,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'default-ad-copywriter',
+    toolId: 'ad-copywriter',
+    name: 'Social Media Ad Copywriter',
+    description: 'Generates high-converting ad copy variations for all major platforms',
+    systemPrompt: `You are a direct-response marketing expert and conversion copywriter with a track record of creating high-ROAS ad campaigns across Facebook, Instagram, TikTok, LinkedIn, Pinterest, and Google Ads.
+You understand platform-specific nuances, attention patterns, and buyer psychology deeply.
+Every word you write is intentional — designed to stop the scroll, create desire, and drive action.
+Return ONLY valid JSON — no markdown, no explanations, no extra text.`,
+    userPromptTemplate: `Write 3 high-converting {{platform}} ad copy variations for:
+
+Product: {{productName}}
+Offer: {{offer}}
+Target Audience: {{audience}}
+Platform: {{platform}} (headline max {{charLimit}} chars)
+Tone: {{tone}}
+
+Return ONLY valid JSON:
+{
+  "variations": [
+    {
+      "headline": "Under {{charLimit}} characters",
+      "primaryText": "2-3 compelling sentences",
+      "callToAction": "2-4 word action CTA",
+      "promoMessage": "1 promotional sentence",
+      "discountText": "Discount/offer text or empty string"
+    }
+  ]
+}
+
+Each variation must take a completely different angle. Match {{tone}} tone throughout.`,
+    isDefault: true,
+    isEnabled: true,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'default-sales-script',
+    toolId: 'sales-script',
+    name: 'Shorts & Reels Script Writer',
+    description: 'Creates viral short-form video sales scripts for TikTok, Reels, and YouTube Shorts',
+    systemPrompt: `You are a viral short-form video content strategist and sales script writer who has created scripts with millions of views across TikTok, Instagram Reels, and YouTube Shorts.
+You understand the Hook-Problem-Solution-CTA framework deeply, and you write with the energy and authenticity that resonates on each specific platform.
+Your scripts are conversational, punchy, and designed to sell without feeling salesy.
+Return ONLY valid JSON — no markdown, no explanations, no extra text.`,
+    userPromptTemplate: `Write a {{platform}} sales script for:
+
+Product: {{productName}}
+Description: {{description}}
+Target Audience: {{audience}}
+Video Length: {{videoLength}} seconds (~{{wordCount}} words)
+
+Return ONLY valid JSON:
+{
+  "variations": [
+    {
+      "version": "{{platform}}",
+      "viralHook": "Alternative ultra-viral hook line",
+      "script": {
+        "hook": "Scroll-stopping opening (1-2 sentences)",
+        "problem": "Relatable problem statement (1-2 sentences)",
+        "productIntro": "Natural product introduction (1-2 sentences)",
+        "benefits": ["Benefit 1", "Benefit 2", "Benefit 3"],
+        "callToAction": "Urgent CTA (1 sentence)",
+        "closingLine": "Memorable closer (1 short sentence)"
+      }
+    }
+  ]
+}`,
+    isDefault: true,
+    isEnabled: true,
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 // ─── Store ─────────────────────────────────────────────────────────────────────
@@ -241,7 +405,7 @@ export const usePromptStore = create<PromptStore>()(
     }),
     {
       name: 'pixelmind-prompts',
-      version: 4,
+      version: 5,
       migrate: () => ({ templates: DEFAULT_TEMPLATES }),
     }
   )

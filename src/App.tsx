@@ -65,6 +65,16 @@ import { ContentWriterManagerPage } from './pages/admin/tools/ContentWriterManag
 import { SloganManagerPage } from './pages/admin/tools/SloganManagerPage';
 import { SocialManagerPage } from './pages/admin/tools/SocialManagerPage';
 import { WordCounterManagerPage } from './pages/admin/tools/WordCounterManagerPage';
+import { ColorPaletteGeneratorPage } from './pages/tools/ColorPaletteGeneratorPage';
+import { BrandVoicePage } from './pages/tools/BrandVoicePage';
+import { FontPairingPage } from './pages/tools/FontPairingPage';
+import { AdCopywriterPage } from './pages/tools/AdCopywriterPage';
+import { SalesScriptPage } from './pages/tools/SalesScriptPage';
+import { ColorPaletteManagerPage } from './pages/admin/tools/ColorPaletteManagerPage';
+import { BrandVoiceManagerPage } from './pages/admin/tools/BrandVoiceManagerPage';
+import { FontPairingManagerPage } from './pages/admin/tools/FontPairingManagerPage';
+import { AdCopyManagerPage } from './pages/admin/tools/AdCopyManagerPage';
+import { SalesScriptManagerPage } from './pages/admin/tools/SalesScriptManagerPage';
 import { ThemeProvider } from './components/providers/ThemeProvider';
 import { TermsPage } from './pages/public/TermsPage';
 import { PrivacyPage } from './pages/public/PrivacyPage';
@@ -174,6 +184,11 @@ export default function App() {
         <Route path="/tools/word-counter" element={<ToolRoute toolId="word-counter" element={<WordCounterPage guestAllowed />} />} />
         <Route path="/tools/age-calculator" element={<ToolRoute toolId="age-calculator" element={<AgeCalculatorPage guestAllowed />} />} />
         <Route path="/tools/slogan-generator" element={<ToolRoute toolId="slogan-generator" element={<SloganGeneratorPage guestAllowed />} />} />
+        <Route path="/tools/color-palette" element={<ToolRoute toolId="color-palette" element={<ColorPaletteGeneratorPage guestAllowed />} />} />
+        <Route path="/tools/brand-voice" element={<ToolRoute toolId="brand-voice" element={<BrandVoicePage guestAllowed />} />} />
+        <Route path="/tools/font-pairing" element={<ToolRoute toolId="font-pairing" element={<FontPairingPage guestAllowed />} />} />
+        <Route path="/tools/ad-copywriter" element={<ToolRoute toolId="ad-copywriter" element={<AdCopywriterPage guestAllowed />} />} />
+        <Route path="/tools/sales-script" element={<ToolRoute toolId="sales-script" element={<SalesScriptPage guestAllowed />} />} />
 
         {/* Placeholder dashboard pages */}
         <Route path="/history" element={<HistoryPage />} />
@@ -217,6 +232,11 @@ export default function App() {
         <Route path="/admin/tool/slogan" element={<SloganManagerPage />} />
         <Route path="/admin/tool/social" element={<SocialManagerPage />} />
         <Route path="/admin/tool/word-counter" element={<WordCounterManagerPage />} />
+        <Route path="/admin/tool/color-palette" element={<ColorPaletteManagerPage />} />
+        <Route path="/admin/tool/brand-voice" element={<BrandVoiceManagerPage />} />
+        <Route path="/admin/tool/font-pairing" element={<FontPairingManagerPage />} />
+        <Route path="/admin/tool/ad-copy" element={<AdCopyManagerPage />} />
+        <Route path="/admin/tool/sales-script" element={<SalesScriptManagerPage />} />
 
         {/* Admin — System */}
         <Route path="/admin/media" element={<MediaLibraryPage />} />

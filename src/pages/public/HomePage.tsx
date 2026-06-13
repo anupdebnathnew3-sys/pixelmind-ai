@@ -17,7 +17,8 @@ import {
   CheckCircle, Star, TrendingUp, Shield, Cpu, Users, Sparkles, Play,
   ChevronDown, ChevronUp, Upload, Wand2, Copy,
   BarChart3, Layers, Check, Zap,
-  FileText, MessageSquare, Calendar, Calculator
+  FileText, MessageSquare, Calendar, Calculator,
+  Palette, Mic2, Type, Megaphone, Video
 } from 'lucide-react';
 
 // â”€â”€â”€ Animated Counter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -396,66 +397,71 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Additional tools — 3 column grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              {
-                icon: <FileText size={20} />,
-                color: '#059669',
-                title: 'AI Content Writer',
-                desc: 'Blog posts, product descriptions, and marketing copy with tone and style control.',
-                path: '/tools/content-writer',
-              },
-{
-                icon: <MessageSquare size={20} />,
-                color: '#EF4444',
-                title: 'Slogan Generator',
-                desc: 'Create catchy brand slogans in 6 styles for any industry with AI.',
-                path: '/tools/slogan-generator',
-              },
-              {
-                icon: <Hash size={20} />,
-                color: '#F59E0B',
-                title: 'Word Counter',
-                desc: 'Count words, characters, sentences, and reading time in any text.',
-                path: '/tools/word-counter',
-              },
-              {
-                icon: <Calculator size={20} />,
-                color: '#8B5CF6',
-                title: 'Age Calculator',
-                desc: 'Exact age breakdown with zodiac sign, birthday countdown, and live ticker.',
-                path: '/tools/age-calculator',
-              },
-              {
-                icon: <Calendar size={20} />,
-                color: '#06B6D4',
-                title: 'Event Calendar',
-                desc: 'Global holidays and events for content planning across 10+ countries.',
-                path: '/tools/event-calendar',
-              },
-            ].map(tool => (
-              <Link
-                key={tool.path}
-                to={tool.path}
-                className="group flex flex-col gap-3 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] hover:border-[#A5B4FC] dark:hover:border-[#6366F1]/40 rounded-2xl p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
-              >
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm flex-shrink-0"
-                  style={{ backgroundColor: tool.color }}
-                >
-                  {tool.icon}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{tool.title}</h3>
-                  <p className="text-xs text-gray-500 dark:text-[#A1A1AA] leading-relaxed">{tool.desc}</p>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: tool.color }}>
-                  Try free <ArrowRight size={12} />
-                </div>
-              </Link>
-            ))}
-          </div>
+          {/* Additional tools — organized by category */}
+          {[
+            {
+              emoji: '⚡', label: 'Core AI Tools',
+              tools: [
+                { icon: <FileText size={20} />, color: '#059669', title: 'AI Content Writer',  desc: 'Blog posts, product descriptions, and marketing copy with tone and style control.', path: '/tools/content-writer' },
+                { icon: <MessageSquare size={20} />, color: '#EF4444', title: 'Slogan Generator', desc: 'Create catchy brand slogans in 6 styles for any industry with AI.', path: '/tools/slogan-generator' },
+                { icon: <Hash size={20} />, color: '#F59E0B', title: 'Word Counter', desc: 'Count words, characters, sentences, and reading time in any text.', path: '/tools/word-counter' },
+                { icon: <Calculator size={20} />, color: '#8B5CF6', title: 'Age Calculator', desc: 'Exact age breakdown with zodiac sign, birthday countdown, and live ticker.', path: '/tools/age-calculator' },
+                { icon: <Calendar size={20} />, color: '#06B6D4', title: 'Event Calendar', desc: 'Global holidays and events for content planning across 10+ countries.', path: '/tools/event-calendar' },
+              ],
+            },
+            {
+              emoji: '🎨', label: 'Color & Branding',
+              tools: [
+                { icon: <Palette size={20} />, color: '#EC4899', title: 'AI Color Palette Generator', desc: 'Generate 3 professional brand color palettes from any concept or description.', path: '/tools/color-palette' },
+                { icon: <Mic2 size={20} />, color: '#8B5CF6', title: 'Brand Voice & Slogans', desc: 'Create your brand voice, taglines, slogans, and marketing hooks with AI.', path: '/tools/brand-voice' },
+              ],
+            },
+            {
+              emoji: '✍️', label: 'Typography & Fonts',
+              tools: [
+                { icon: <Type size={20} />, color: '#0EA5E9', title: 'AI Font Pairing Assistant', desc: 'Discover perfect Google Font combinations for any design style with harmony scores.', path: '/tools/font-pairing' },
+              ],
+            },
+            {
+              emoji: '📣', label: 'Marketing & Copywriting',
+              tools: [
+                { icon: <Megaphone size={20} />, color: '#F59E0B', title: 'Social Media Ad Copywriter', desc: 'Generate high-converting ad copy for Facebook, Instagram, TikTok, and more.', path: '/tools/ad-copywriter' },
+                { icon: <Video size={20} />, color: '#EC4899', title: 'Shorts & Reels Script Writer', desc: 'Write viral short-form video sales scripts for TikTok, Reels, and YouTube Shorts.', path: '/tools/sales-script' },
+              ],
+            },
+          ].map(category => (
+            <div key={category.label} className="mb-8">
+              {/* Category label */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-base">{category.emoji}</span>
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{category.label}</h3>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-[#232650]" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {category.tools.map(tool => (
+                  <Link
+                    key={tool.path}
+                    to={tool.path}
+                    className="group flex flex-col gap-3 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] hover:border-[#A5B4FC] dark:hover:border-[#6366F1]/40 rounded-2xl p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+                  >
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm flex-shrink-0"
+                      style={{ backgroundColor: tool.color }}
+                    >
+                      {tool.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{tool.title}</h3>
+                      <p className="text-xs text-gray-500 dark:text-[#A1A1AA] leading-relaxed">{tool.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: tool.color }}>
+                      Try free <ArrowRight size={12} />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
 
           <p className="text-center text-sm text-gray-400 dark:text-[#52525B] mt-8">
             Enjoyed the tools?{' '}

@@ -10,7 +10,7 @@ import {
   Shield, Bot, BarChart3, Globe, Calculator, DollarSign,
   Lock, Navigation, Palette, Scale, Home, Mail, Users,
   Image as ImageIcon, BellRing, Search, Database,
-  PanelTop, Megaphone
+  PanelTop, Megaphone, Mic2, Type, Video
 } from 'lucide-react';
 
 interface NavItem {
@@ -33,9 +33,29 @@ const navItems: NavItem[] = [
 { id: 'wordcount', label: 'Word Counter', icon: <Hash size={16} />, path: '/tools/word-counter' },
       { id: 'slogan', label: 'Slogan Generator', icon: <MessageSquare size={16} />, path: '/tools/slogan-generator' },
       { id: 'age-calc', label: 'Age Calculator', icon: <Calculator size={16} />, path: '/tools/age-calculator' },
+      { id: 'event-cal', label: 'Event Calendar', icon: <Calendar size={16} />, path: '/tools/event-calendar' },
     ]
   },
-  { id: 'calendar', label: 'Event Calendar', icon: <Calendar size={18} />, path: '/tools/event-calendar' },
+  {
+    id: 'branding', label: 'Color & Branding', icon: <Palette size={18} />, path: '/tools/branding',
+    children: [
+      { id: 'color-palette', label: 'Color Palette Generator', icon: <Palette size={16} />,    path: '/tools/color-palette', badge: 'New' },
+      { id: 'brand-voice',   label: 'Brand Voice & Slogans',   icon: <Mic2 size={16} />,        path: '/tools/brand-voice',   badge: 'New' },
+    ]
+  },
+  {
+    id: 'typography', label: 'Typography & Fonts', icon: <Type size={18} />, path: '/tools/typography',
+    children: [
+      { id: 'font-pairing', label: 'Font Pairing Assistant', icon: <Type size={16} />, path: '/tools/font-pairing', badge: 'New' },
+    ]
+  },
+  {
+    id: 'marketing', label: 'Marketing Tools', icon: <Megaphone size={18} />, path: '/tools/marketing',
+    children: [
+      { id: 'ad-copy',      label: 'Ad Copywriter',         icon: <Megaphone size={16} />, path: '/tools/ad-copywriter', badge: 'New' },
+      { id: 'sales-script', label: 'Reels Script Writer',   icon: <Video size={16} />,     path: '/tools/sales-script',  badge: 'New' },
+    ]
+  },
   { id: 'history', label: 'History', icon: <Clock size={18} />, path: '/history' },
   { id: 'ai-settings', label: 'AI Settings', icon: <Bot size={18} />, path: '/ai-settings' },
   { id: 'billing', label: 'Billing', icon: <CreditCard size={18} />, path: '/billing' },
@@ -70,6 +90,11 @@ const adminItems: NavItem[] = [
       { id: 'tool-slogan',     label: 'Slogan Generator',   icon: <MessageSquare size={16} />, path: '/admin/tool/slogan' },
       { id: 'tool-social',     label: 'Social Scheduler',   icon: <Globe size={16} />,      path: '/admin/tool/social' },
       { id: 'tool-word',       label: 'Word Counter',       icon: <Hash size={16} />,       path: '/admin/tool/word-counter' },
+      { id: 'tool-color',      label: 'Color Palette',      icon: <Palette size={16} />,    path: '/admin/tool/color-palette' },
+      { id: 'tool-brand',      label: 'Brand Voice',        icon: <Mic2 size={16} />,       path: '/admin/tool/brand-voice' },
+      { id: 'tool-font',       label: 'Font Pairing',       icon: <Type size={16} />,       path: '/admin/tool/font-pairing' },
+      { id: 'tool-adcopy',     label: 'Ad Copywriter',      icon: <Megaphone size={16} />,  path: '/admin/tool/ad-copy' },
+      { id: 'tool-script',     label: 'Sales Script',       icon: <Video size={16} />,      path: '/admin/tool/sales-script' },
     ],
   },
 

@@ -8,7 +8,8 @@ import { useStore } from '../../store/useStore';
 import { useAdminStore } from '../../store/useAdminStore';
 import {
   Image, FileText, Globe, Zap, TrendingUp, Clock, Download,
-  ArrowRight, Star, Hash, Calendar, Bot, ChevronRight
+  ArrowRight, Star, Hash, Calendar, Bot, ChevronRight,
+  Palette, Mic2, Type, Megaphone, Video, MessageSquare
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
@@ -33,11 +34,17 @@ const recentActivity = [
 ];
 
 const ALL_QUICK_TOOLS = [
-  { label: 'AI Metadata', path: '/tools/metadata', icon: <Image size={20} />, color: '#6366F1', desc: 'Generate for 100+ images' },
-  { label: 'Image to Prompt', path: '/tools/image-to-prompt', icon: <Zap size={20} />, color: '#8B5CF6', desc: 'For Midjourney & more' },
-  { label: 'Content Writer', path: '/tools/content-writer', icon: <FileText size={20} />, color: '#F59E0B', desc: 'Blogs, scripts & more' },
-  { label: 'Word Counter', path: '/tools/word-counter', icon: <Hash size={20} />, color: '#10B981', desc: 'Real-time analysis' },
-  { label: 'Event Calendar', path: '/tools/event-calendar', icon: <Calendar size={20} />, color: '#3B82F6', desc: 'Global holidays' },
+  { label: 'AI Metadata',      path: '/tools/metadata',       icon: <Image size={20} />,     color: '#6366F1', desc: 'Generate for 100+ images' },
+  { label: 'Image to Prompt',  path: '/tools/image-to-prompt',icon: <Zap size={20} />,       color: '#8B5CF6', desc: 'For Midjourney & more' },
+  { label: 'Content Writer',   path: '/tools/content-writer', icon: <FileText size={20} />,  color: '#F59E0B', desc: 'Blogs, scripts & more' },
+  { label: 'Word Counter',     path: '/tools/word-counter',   icon: <Hash size={20} />,      color: '#10B981', desc: 'Real-time analysis' },
+  { label: 'Event Calendar',   path: '/tools/event-calendar', icon: <Calendar size={20} />,  color: '#3B82F6', desc: 'Global holidays' },
+  { label: 'Slogan Generator', path: '/tools/slogan-generator',icon: <MessageSquare size={20} />, color: '#EF4444', desc: 'Brand slogans with AI' },
+  { label: 'Color Palette',    path: '/tools/color-palette',  icon: <Palette size={20} />,   color: '#EC4899', desc: '3 brand palettes' },
+  { label: 'Brand Voice',      path: '/tools/brand-voice',    icon: <Mic2 size={20} />,      color: '#8B5CF6', desc: 'Taglines & voice' },
+  { label: 'Font Pairing',     path: '/tools/font-pairing',   icon: <Type size={20} />,      color: '#0EA5E9', desc: 'Perfect font combos' },
+  { label: 'Ad Copywriter',    path: '/tools/ad-copywriter',  icon: <Megaphone size={20} />, color: '#F59E0B', desc: 'High-converting ads' },
+  { label: 'Sales Script',     path: '/tools/sales-script',   icon: <Video size={20} />,     color: '#EC4899', desc: 'TikTok & Reels scripts' },
 ];
 
 export const DashboardPage: React.FC = () => {

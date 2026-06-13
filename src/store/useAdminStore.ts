@@ -216,14 +216,22 @@ export interface HeroAnimationSettings {
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_TOOLS: ToolConfig[] = [
-  { id: 'metadata',         name: 'AI Metadata Generator', enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
-  { id: 'image-to-prompt',  name: 'Image to Prompt',       enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
-  { id: 'content-writer',   name: 'AI Content Writer',     enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
-  { id: 'slogan-generator', name: 'Slogan Generator',      enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
-  { id: 'event-calendar',   name: 'Event Calendar',        enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
-  { id: 'age-calculator',   name: 'Age Calculator',        enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
-  { id: 'word-counter',     name: 'Word Counter',          enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
-  { id: 'social-scheduler', name: 'Social Scheduler',      enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'metadata',         name: 'AI Metadata Generator',       enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'image-to-prompt',  name: 'Image to Prompt',             enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'content-writer',   name: 'AI Content Writer',           enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'slogan-generator', name: 'Slogan Generator',            enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'event-calendar',   name: 'Event Calendar',              enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'age-calculator',   name: 'Age Calculator',              enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'word-counter',     name: 'Word Counter',                enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'social-scheduler', name: 'Social Scheduler',            enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  // Color & Branding
+  { id: 'color-palette',    name: 'AI Color Palette Generator',  enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'brand-voice',      name: 'Brand Voice & Slogan Matcher',enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  // Typography
+  { id: 'font-pairing',     name: 'AI Font Pairing Assistant',   enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  // Marketing
+  { id: 'ad-copywriter',    name: 'Social Media Ad Copywriter',  enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'sales-script',     name: 'Shorts & Reels Script Writer',enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
 ];
 
 const DEFAULT_HOMEPAGE: HomepageContent = {
