@@ -11,13 +11,13 @@ import { callAI, imageToBase64ForAI, extractJSON } from '../../services/aiServic
 import {
   Upload, Image, Download, RefreshCw, Settings, ChevronDown,
   ChevronUp, Trash2, Copy, X, AlertCircle, Type, AlignLeft, Hash, Zap,
-  ZoomIn, Maximize2, Plus, RotateCcw, Sparkles, FileDown, FileText, Layers,
-  Star, User, Archive
+  ZoomIn, Maximize2, Plus, RotateCcw, Sparkles, FileDown, Layers,
+  Star, User, Archive, CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
 import { useAdminStore } from '../../store/useAdminStore';
-import { embedMetadata, triggerDownload, buildZIPPackage } from '../../services/metadataEmbedService';
+import { triggerDownload, buildZIPPackage } from '../../services/metadataEmbedService';
 import type { ZIPItem } from '../../services/metadataEmbedService';
 
 const MARKETPLACES = [
@@ -286,7 +286,6 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const embedEnabled   = (cmsContent['meta_embed_enabled']   ?? 'true') === 'true';
   const embedCopyright = cmsContent['meta_embed_copyright'] ?? '';
   const embedCreator   = cmsContent['meta_embed_creator']   ?? '';
-  const zipEnabled     = (cmsContent['meta_zip_enabled']    ?? 'true') === 'true';
   const metadataCache = useRef<Map<string, Partial<ImageFile>>>(new Map());
   const getCacheKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -297,8 +296,6 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const [showExportModal, setShowExportModal] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [categoryDropOpen, setCategoryDropOpen] = useState<string | null>(null); // imageId
-  const [embeddingIds, setEmbeddingIds] = useState<Set<string>>(new Set());
-  const [embedAllLoading, setEmbedAllLoading] = useState(false);
   const [zipLoading, setZipLoading] = useState(false);
   const [globalAuthor, setGlobalAuthor] = useState('');
   const [globalCopyright, setGlobalCopyright] = useState('');
@@ -372,7 +369,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     setImages(prev => prev.map(i => i.id === img.id ? { ...i, status: 'processing', processingField: field, errorMsg: undefined } : i));
     try {
       const result = await generateField(img, field, settings, selectedMarketplace, getTemplate);
-      setImages(prev => prev.map(i => i.id === img.id ? { ...i, ...result } : i));
+      setImages(prev => prev.map(i => i.id === img.id ? { ...i, ...result, rating: i.rating ?? 5 } : i));
       if (isAuthenticated) {
         deductCredits(1);
       } else {
@@ -436,7 +433,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
       results.forEach((result, idx) => {
         const img = chunk[idx];
         if (result.status === 'fulfilled') {
-          setImages(prev => prev.map(i => i.id === img.id ? { ...i, ...result.value } : i));
+          setImages(prev => prev.map(i => i.id === img.id ? { ...i, ...result.value, rating: i.rating ?? 5 } : i));
           metadataCache.current.set(getCacheKey(img.file), result.value);
           if (isAuthenticated) {
             deductCredits(1);
@@ -528,68 +525,6 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     toast.success('JSON exported!');
   };
 
-  const exportTXT = () => {
-    const done = images.filter(i => i.status === 'done');
-    if (!done.length) { toast.error('No data to export'); return; }
-    const text = done.map(img => buildTXTContent(img) + '\n---').join('\n\n');
-    const blob = new Blob([text], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'metadata-export.txt'; a.click();
-    toast.success('TXT exported!');
-  };
-
-  const downloadSingleTXT = (img: ImageFile) => {
-    const blob = new Blob([buildTXTContent(img)], { type: 'text/plain' });
-    triggerDownload(blob, `${img.file.name.replace(/\.[^.]+$/, '')}_metadata.txt`);
-    toast.success('Metadata .TXT downloaded!');
-  };
-
-  const downloadEmbedded = async (img: ImageFile) => {
-    if (!embedEnabled) { toast.error('Metadata embedding is disabled by admin'); return; }
-    setEmbeddingIds(prev => new Set(prev).add(img.id));
-    const tid = toast.loading('Embedding metadata…');
-    try {
-      const { blob, filename, warning } = await embedMetadata(
-        img.file,
-        buildEmbedMeta(img),
-        (stage) => {
-          if (stage === 'embedding') toast.loading('Writing metadata into file…', { id: tid });
-        },
-      );
-      toast.dismiss(tid);
-      if (warning) toast(warning, { icon: '⚠️', duration: 5000 });
-      triggerDownload(blob, filename);
-      toast.success(`${filename} — metadata embedded & downloaded!`);
-    } catch (err) {
-      toast.dismiss(tid);
-      toast.error(err instanceof Error ? err.message : 'Embed failed');
-    } finally {
-      setEmbeddingIds(prev => { const s = new Set(prev); s.delete(img.id); return s; });
-    }
-  };
-
-  const downloadAllEmbedded = async () => {
-    if (!embedEnabled) { toast.error('Metadata embedding is disabled by admin'); return; }
-    const done = images.filter(i => i.status === 'done');
-    if (!done.length) { toast.error('No completed images to download'); return; }
-    setEmbedAllLoading(true);
-    const tid = toast.loading(`Embedding ${done.length} image${done.length !== 1 ? 's' : ''}…`);
-    let success = 0;
-    for (let i = 0; i < done.length; i++) {
-      const img = done[i];
-      try {
-        toast.loading(`Embedding ${i + 1}/${done.length}: ${img.file.name}`, { id: tid });
-        const { blob, filename, warning } = await embedMetadata(img.file, buildEmbedMeta(img));
-        if (warning) toast(warning, { icon: '⚠️', duration: 4000 });
-        triggerDownload(blob, filename);
-        success++;
-        if (i < done.length - 1) await new Promise(r => setTimeout(r, 400));
-      } catch { /* individual failure, continue */ }
-    }
-    toast.dismiss(tid);
-    toast.success(`${success}/${done.length} images embedded & downloaded!`);
-    setEmbedAllLoading(false);
-  };
 
   const downloadAllAsZIP = async () => {
     if (!embedEnabled) { toast.error('Metadata embedding is disabled by admin'); return; }
@@ -901,29 +836,15 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {/* ZIP Download button */}
-              {doneCount > 0 && zipEnabled && embedEnabled && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  loading={zipLoading}
-                  icon={<Archive size={13} />}
-                  onClick={downloadAllAsZIP}
-                >
-                  {zipLoading ? 'Zipping…' : `Download ZIP (${doneCount})`}
-                </Button>
-              )}
-
-              {/* Embed All button */}
+              {/* Embed All → ZIP (single download for all images) */}
               {doneCount > 0 && embedEnabled && (
                 <Button
                   size="sm"
-                  variant="secondary"
-                  loading={embedAllLoading}
-                  icon={<Layers size={13} />}
-                  onClick={downloadAllEmbedded}
+                  loading={zipLoading}
+                  icon={zipLoading ? <Layers size={13} /> : <Archive size={13} />}
+                  onClick={downloadAllAsZIP}
                 >
-                  {embedAllLoading ? 'Embedding…' : `Embed All (${doneCount})`}
+                  {zipLoading ? 'Building ZIP…' : `Embed All & Download ZIP (${doneCount})`}
                 </Button>
               )}
 
@@ -942,10 +863,9 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                     <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden min-w-[200px] py-1">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2 pb-1">{doneCount} file{doneCount !== 1 ? 's' : ''} ready</p>
                       {([
-                        { fmt: 'CSV',  desc: 'Spreadsheet-ready',  color: '#10B981', bg: '#10B98118', action: exportCSV },
-                        { fmt: 'XLSX', desc: 'Excel format',        color: '#3B82F6', bg: '#3B82F618', action: () => { toast.success('XLSX coming soon!'); setExportOpen(false); } },
-                        { fmt: 'TXT',  desc: 'Plain text',          color: '#F59E0B', bg: '#F59E0B18', action: exportTXT },
-                        { fmt: 'JSON', desc: 'Structured data',     color: '#8B5CF6', bg: '#8B5CF618', action: exportJSON },
+                        { fmt: 'CSV',  desc: 'Spreadsheet-ready', color: '#10B981', bg: '#10B98118', action: exportCSV },
+                        { fmt: 'XLSX', desc: 'Excel format',       color: '#3B82F6', bg: '#3B82F618', action: () => { toast.success('XLSX coming soon!'); setExportOpen(false); } },
+                        { fmt: 'JSON', desc: 'Structured data',    color: '#8B5CF6', bg: '#8B5CF618', action: exportJSON },
                       ] as const).map(({ fmt, desc, color, bg, action }) => (
                         <button key={fmt} onClick={() => { action(); setExportOpen(false); }}
                           className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#0d1030]/60 transition-colors group">
@@ -1404,31 +1324,27 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                           )}
                         </div>
 
-                        {/* ── EMBED & DOWNLOAD bar ── */}
+                        {/* ── METADATA CONFIG BAR (rating / author / copyright) ── */}
                         {isDone && embedEnabled && (
                           <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-[#EEF2FF]/40 dark:from-[#0d1030]/60 dark:to-[#6366F1]/5 border-t border-gray-100 dark:border-[#232650] space-y-2.5">
 
-                            {/* Rating + Author + Copyright row */}
+                            {/* Rating stars + Author + Copyright */}
                             <div className="flex items-center gap-2.5 flex-wrap">
-                              {/* Star rating */}
-                              <div className="flex items-center gap-0.5 shrink-0" title="Click a star to rate">
+                              <div className="flex items-center gap-0.5 shrink-0" title="Star rating — defaults to 5★">
                                 {[1, 2, 3, 4, 5].map(star => (
                                   <button
                                     key={star}
                                     onClick={() => setImages(prev => prev.map(i =>
-                                      i.id === img.id ? { ...i, rating: i.rating === star ? undefined : star } : i
+                                      i.id === img.id ? { ...i, rating: i.rating === star && star !== 5 ? 5 : star } : i
                                     ))}
-                                    className={`p-0.5 transition-colors ${(img.rating ?? 0) >= star ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'} hover:text-amber-400`}
+                                    className={`p-0.5 transition-colors ${(img.rating ?? 5) >= star ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'} hover:text-amber-400`}
                                   >
-                                    <Star size={13} fill={(img.rating ?? 0) >= star ? 'currentColor' : 'none'} />
+                                    <Star size={13} fill={(img.rating ?? 5) >= star ? 'currentColor' : 'none'} />
                                   </button>
                                 ))}
-                                {img.rating && (
-                                  <span className="ml-0.5 text-[10px] text-amber-500 font-semibold">{img.rating}★</span>
-                                )}
+                                <span className="ml-0.5 text-[10px] text-amber-500 font-semibold">{img.rating ?? 5}★</span>
                               </div>
 
-                              {/* Author inline */}
                               <input
                                 type="text"
                                 placeholder={embedCreator || 'Author name…'}
@@ -1439,7 +1355,6 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                                 className="flex-1 min-w-[90px] px-2 py-1 text-[11px] rounded-lg border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#191c40] text-gray-700 dark:text-gray-300 outline-none focus:border-[#6366F1] transition-colors"
                               />
 
-                              {/* Copyright inline */}
                               <input
                                 type="text"
                                 placeholder={embedCopyright || '© Copyright…'}
@@ -1451,40 +1366,19 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                               />
                             </div>
 
-                            {/* File info + download buttons */}
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div className="flex items-center gap-2 text-[10px] text-gray-400 min-w-0">
-                                <span className="px-1.5 py-0.5 rounded-md font-bold bg-[#6366F1]/10 text-[#6366F1] dark:text-[#A5B4FC] uppercase tracking-wide">
-                                  {img.file.name.split('.').pop()?.toUpperCase()}
-                                </span>
-                                <span className="font-medium text-gray-500 dark:text-gray-400">{(img.file.size / (1024 * 1024)).toFixed(1)} MB</span>
-                                <span className="text-gray-300 dark:text-gray-600">·</span>
-                                <span>{img.keywords?.length || 0} kw</span>
-                                {embeddingIds.has(img.id) && (
-                                  <span className="flex items-center gap-1 text-[#6366F1] font-medium">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-ping" />
-                                    Embedding…
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                <button
-                                  onClick={() => downloadSingleTXT(img)}
-                                  title="Download metadata as .TXT"
-                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] hover:border-[#6366F1] hover:text-[#6366F1] dark:hover:text-[#A5B4FC] transition-colors"
-                                >
-                                  <FileText size={11} /> .TXT
-                                </button>
-                                <button
-                                  onClick={() => downloadEmbedded(img)}
-                                  disabled={embeddingIds.has(img.id)}
-                                  title="Embed XMP/IPTC metadata into image file & download"
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] text-white hover:from-[#4F46E5] hover:to-[#7C3AED] transition-all shadow-sm shadow-[#6366F1]/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  <FileDown size={11} />
-                                  {embeddingIds.has(img.id) ? 'Embedding…' : 'Embed & Download'}
-                                </button>
-                              </div>
+                            {/* Status row — format, size, keywords, verification check */}
+                            <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                              <span className="px-1.5 py-0.5 rounded-md font-bold bg-[#6366F1]/10 text-[#6366F1] dark:text-[#A5B4FC] uppercase tracking-wide">
+                                {img.file.name.split('.').pop()?.toUpperCase()}
+                              </span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">{(img.file.size / (1024 * 1024)).toFixed(1)} MB</span>
+                              <span className="text-gray-300 dark:text-gray-600">·</span>
+                              <span>{img.keywords?.length || 0} keywords</span>
+                              <span className="text-gray-300 dark:text-gray-600">·</span>
+                              <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-semibold">
+                                <CheckCircle2 size={10} />
+                                Ready — XMP · IPTC · EXIF
+                              </span>
                             </div>
                           </div>
                         )}
@@ -1542,64 +1436,48 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                 </p>
               </div>
 
-              {/* export format buttons */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Primary action: ZIP with embedded images */}
+              {embedEnabled && (
+                <button
+                  onClick={() => { setShowExportModal(false); downloadAllAsZIP(); }}
+                  className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 border-[#6366F1]/40 bg-gradient-to-br from-[#EEF2FF] to-[#F5F3FF] dark:from-[#6366F1]/15 dark:to-[#8B5CF6]/10 hover:shadow-lg hover:scale-[1.01] transition-all group mb-3"
+                >
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-md bg-gradient-to-br from-[#6366F1] to-[#8B5CF6]">
+                    <Archive size={20} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="text-base font-bold text-gray-900 dark:text-white">Embed All &amp; Download ZIP</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {doneCount} image{doneCount !== 1 ? 's' : ''} · XMP · IPTC · EXIF · CSV — zero quality loss
+                    </p>
+                  </div>
+                  <FileDown size={16} className="opacity-40 group-hover:opacity-100 transition-opacity flex-shrink-0 text-[#6366F1]" />
+                </button>
+              )}
+
+              {/* Metadata-only exports */}
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Metadata only (no images)</p>
+              <div className="grid grid-cols-2 gap-2.5">
                 {([
-                  { fmt: 'CSV',  label: 'Spreadsheet',   color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: exportCSV },
-                  { fmt: 'XLSX', label: 'Excel Format',   color: '#3B82F6', bg: 'from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10',             border: 'border-blue-200 dark:border-blue-700/40',    action: () => toast.success('XLSX coming soon!') },
-                  { fmt: 'TXT',  label: 'Plain Text',     color: '#F59E0B', bg: 'from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/10',          border: 'border-amber-200 dark:border-amber-700/40',  action: exportTXT },
-                  { fmt: 'JSON', label: 'Structured',     color: '#8B5CF6', bg: 'from-violet-50 to-violet-50 dark:from-violet-900/20 dark:to-violet-900/10',      border: 'border-violet-200 dark:border-violet-700/40', action: exportJSON },
+                  { fmt: 'CSV',  label: 'Spreadsheet', color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: exportCSV },
+                  { fmt: 'XLSX', label: 'Excel Format', color: '#3B82F6', bg: 'from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10',             border: 'border-blue-200 dark:border-blue-700/40',    action: () => toast.success('XLSX coming soon!') },
+                  { fmt: 'JSON', label: 'Structured',   color: '#8B5CF6', bg: 'from-violet-50 to-violet-50 dark:from-violet-900/20 dark:to-violet-900/10',     border: 'border-violet-200 dark:border-violet-700/40', action: exportJSON },
                 ] as const).map(({ fmt, label, color, bg, border, action }) => (
                   <button
                     key={fmt}
                     onClick={() => { action(); setShowExportModal(false); }}
-                    className={`group flex items-center gap-3 px-4 py-3.5 rounded-2xl border bg-gradient-to-br ${bg} ${border} hover:shadow-md hover:scale-[1.02] transition-all`}
+                    className={`group flex items-center gap-2.5 px-3 py-3 rounded-xl border bg-gradient-to-br ${bg} ${border} hover:shadow-md hover:scale-[1.02] transition-all`}
                   >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm text-white flex-shrink-0 shadow-sm" style={{ background: color }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white flex-shrink-0 shadow-sm" style={{ background: color }}>
                       {fmt}
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{fmt}</p>
-                      <p className="text-[11px] text-gray-400">{label}</p>
+                      <p className="text-xs font-bold text-gray-800 dark:text-gray-100">{fmt}</p>
+                      <p className="text-[10px] text-gray-400">{label}</p>
                     </div>
-                    <Download size={13} className="ml-auto opacity-30 group-hover:opacity-100 transition-opacity flex-shrink-0" style={{ color }} />
                   </button>
                 ))}
               </div>
-
-              {/* Embed & download images option */}
-              {embedEnabled && (
-                <button
-                  onClick={() => { setShowExportModal(false); downloadAllEmbedded(); }}
-                  className="w-full mt-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-[#6366F1]/30 bg-gradient-to-br from-[#EEF2FF] to-[#EEF2FF] dark:from-[#6366F1]/10 dark:to-[#8B5CF6]/5 hover:shadow-md hover:scale-[1.01] transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm bg-gradient-to-br from-[#6366F1] to-[#8B5CF6]">
-                    <Layers size={16} />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Embed &amp; Download Images</p>
-                    <p className="text-[11px] text-gray-400">XMP · IPTC · EXIF — zero quality loss</p>
-                  </div>
-                  <FileDown size={13} className="opacity-30 group-hover:opacity-100 transition-opacity flex-shrink-0 text-[#6366F1]" />
-                </button>
-              )}
-
-              {/* ZIP download option */}
-              {zipEnabled && embedEnabled && (
-                <button
-                  onClick={() => { setShowExportModal(false); downloadAllAsZIP(); }}
-                  className="w-full mt-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-700/40 bg-gradient-to-br from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10 hover:shadow-md hover:scale-[1.01] transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600">
-                    <Archive size={16} />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Download All as ZIP</p>
-                    <p className="text-[11px] text-gray-400">Embedded images + .TXT + CSV in one package</p>
-                  </div>
-                  <Download size={13} className="opacity-30 group-hover:opacity-100 transition-opacity flex-shrink-0 text-emerald-500" />
-                </button>
-              )}
 
               <button
                 onClick={() => setShowExportModal(false)}

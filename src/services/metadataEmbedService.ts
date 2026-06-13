@@ -48,7 +48,6 @@ ${kws}
     </rdf:Bag>
    </dc:subject>${rights}${creator}
    <photoshop:Headline>${escX(m.title)}</photoshop:Headline>
-   <photoshop:Caption>${escX(m.description)}</photoshop:Caption>
    <xmp:CreatorTool>PixelMind AI</xmp:CreatorTool>${rating}
   </rdf:Description>
  </rdf:RDF>
@@ -88,6 +87,57 @@ function u32BE(n: number): Uint8Array {
 
 function u32LE(n: number): Uint8Array {
   return new Uint8Array([n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF, (n >> 24) & 0xFF]);
+}
+
+// ─── JPEG EXIF segment (APP1 = FF E1, "Exif\0\0" header) ────────────────────
+// Writes ImageDescription (0x010E), Artist (0x013B), Copyright (0x8298)
+// as ASCII strings in a minimal TIFF/IFD0 structure.
+
+function buildJPEGEXIF(m: EmbedMetadata): Uint8Array {
+  const entries: Array<{ tag: number; str: string }> = [];
+  if (m.description) entries.push({ tag: 0x010E, str: m.description.slice(0, 500) }); // ImageDescription
+  if (m.creator)     entries.push({ tag: 0x013B, str: m.creator.slice(0, 100) });      // Artist
+  if (m.copyright)   entries.push({ tag: 0x8298, str: m.copyright.slice(0, 100) });    // Copyright
+  if (entries.length === 0) return new Uint8Array(0);
+
+  entries.sort((a, b) => a.tag - b.tag); // TIFF requires ascending tag order
+  const N = entries.length;
+
+  // TIFF header (8 bytes) + IFD0: 2 + 12*N + 4 bytes
+  const ifdOffset = 8;
+  const ifdSize   = 2 + 12 * N + 4;
+  let   strOffset = ifdOffset + ifdSize; // string data starts here (from TIFF start)
+
+  const strParts: Array<{ bytes: Uint8Array; offset: number }> = [];
+  for (const e of entries) {
+    const bytes = ENC.encode(e.str + '\0'); // null-terminated
+    strParts.push({ bytes, offset: strOffset });
+    strOffset += bytes.length;
+  }
+
+  const ifdParts: Uint8Array[] = [u16LE(N)];
+  for (let i = 0; i < entries.length; i++) {
+    const len = strParts[i].bytes.length;
+    ifdParts.push(u16LE(entries[i].tag), u16LE(2), u32LE(len));
+    if (len <= 4) {
+      const padded = new Uint8Array(4);
+      padded.set(strParts[i].bytes);
+      ifdParts.push(padded);
+    } else {
+      ifdParts.push(u32LE(strParts[i].offset));
+    }
+  }
+  ifdParts.push(u32LE(0)); // next IFD = none
+
+  const tiffHeader = new Uint8Array([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00]); // LE, magic, IFD@8
+  const exifId     = new Uint8Array([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]);              // "Exif\0\0"
+  const ifdData    = concat(...ifdParts);
+  const strData    = strParts.length ? concat(...strParts.map(s => s.bytes)) : new Uint8Array(0);
+  const payload    = concat(exifId, tiffHeader, ifdData, strData);
+  const payLen     = payload.length + 2;
+  if (payLen > 65535) return new Uint8Array(0);
+
+  return concat(new Uint8Array([0xFF, 0xE1]), u16BE(payLen), payload);
 }
 
 // ─── JPEG XMP segment (APP1 = FF E1) ─────────────────────────────────────────
@@ -159,6 +209,7 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
 
   const XMP_NS  = ENC.encode('http://ns.adobe.com/xap/1.0/\0');
   const PS_HDR  = ENC.encode('Photoshop 3.0\0');
+  const EXIF_ID = new Uint8Array([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]); // "Exif\0\0"
 
   const kept: Uint8Array[] = [];
   let insertAfter = 0; // index in `kept` to splice XMP+IPTC after
@@ -184,8 +235,9 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
     const segEnd = pos + 2 + len;
 
     let skip = false;
-    if (marker === 0xE1 && bytesMatch(bytes, pos + 4, XMP_NS)) skip = true;  // existing XMP
-    if (marker === 0xED && bytesMatch(bytes, pos + 4, PS_HDR)) skip = true;  // existing IPTC
+    if (marker === 0xE1 && bytesMatch(bytes, pos + 4, XMP_NS))  skip = true; // existing XMP
+    if (marker === 0xE1 && bytesMatch(bytes, pos + 4, EXIF_ID)) skip = true; // existing EXIF
+    if (marker === 0xED && bytesMatch(bytes, pos + 4, PS_HDR))  skip = true; // existing IPTC
 
     if (!skip) {
       kept.push(bytes.slice(pos, segEnd));
@@ -199,12 +251,15 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
   // Build insertion point (after APP0 if present, else after SOI)
   const insertion = insertAfter === 0 ? 1 : insertAfter;
   const xmpSeg  = buildJPEGXMP(m);
+  const exifSeg = buildJPEGEXIF(m);
   const iptcSeg = buildJPEGIPTC(m);
 
   const before = kept.slice(0, insertion);
   const after  = kept.slice(insertion);
 
-  return concat(...before, xmpSeg, iptcSeg, ...after).buffer as ArrayBuffer;
+  // Inject order: XMP (APP1) → EXIF (APP1) → IPTC (APP13), all after SOI/APP0
+  const newSegs = exifSeg.length ? [xmpSeg, exifSeg, iptcSeg] : [xmpSeg, iptcSeg];
+  return concat(...before, ...newSegs, ...after).buffer as ArrayBuffer;
 }
 
 // ─── PNG CRC32 ────────────────────────────────────────────────────────────────
