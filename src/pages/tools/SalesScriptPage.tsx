@@ -6,21 +6,24 @@ import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { callAI, extractJSON } from '../../services/aiService';
-import { Video, Copy, RefreshCw, AlertCircle, Zap, Play } from 'lucide-react';
+import {
+  Video, Copy, RefreshCw, AlertCircle, Zap, Play,
+  Settings, ChevronDown, ChevronUp,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
 
 const VIDEO_LENGTHS = [
-  { id: '30', label: '30 Seconds', desc: 'Ultra-short punch', words: '65–80 words' },
-  { id: '45', label: '45 Seconds', desc: 'Balanced story', words: '100–120 words' },
-  { id: '60', label: '60 Seconds', desc: 'Full pitch', words: '130–160 words' },
+  { id: '30', label: '30s', fullLabel: '30 Seconds', desc: 'Ultra-short punch', words: '65–80 words' },
+  { id: '45', label: '45s', fullLabel: '45 Seconds', desc: 'Balanced story',    words: '100–120 words' },
+  { id: '60', label: '60s', fullLabel: '60 Seconds', desc: 'Full pitch',         words: '130–160 words' },
 ];
 
 const VERSIONS = [
-  { id: 'tiktok',   label: 'TikTok',         emoji: '🎵', desc: 'Trendy, casual, hook-first' },
-  { id: 'reels',    label: 'Instagram Reels', emoji: '📱', desc: 'Visual, aesthetic, lifestyle' },
-  { id: 'shorts',   label: 'YouTube Shorts',  emoji: '▶️', desc: 'Informative, value-packed' },
+  { id: 'tiktok',   label: 'TikTok',          emoji: '🎵', desc: 'Trendy, casual, hook-first' },
+  { id: 'reels',    label: 'Instagram Reels',  emoji: '📱', desc: 'Visual, aesthetic, lifestyle' },
+  { id: 'shorts',   label: 'YouTube Shorts',   emoji: '▶️', desc: 'Informative, value-packed' },
 ];
 
 interface ScriptSection {
@@ -39,21 +42,21 @@ interface ScriptVariation {
 }
 
 const SECTION_COLORS: Record<string, string> = {
-  hook:          '#EC4899',
-  problem:       '#F59E0B',
-  productIntro:  '#6366F1',
-  benefits:      '#10B981',
-  callToAction:  '#0EA5E9',
-  closingLine:   '#8B5CF6',
+  hook:         '#EC4899',
+  problem:      '#F59E0B',
+  productIntro: '#6366F1',
+  benefits:     '#10B981',
+  callToAction: '#0EA5E9',
+  closingLine:  '#8B5CF6',
 };
 
 const SECTION_LABELS: Record<string, string> = {
-  hook:          '🎯 Hook (First 5 Seconds)',
-  problem:       '⚠️ Problem Statement',
-  productIntro:  '✨ Product Introduction',
-  benefits:      '💡 Key Benefits',
-  callToAction:  '🔥 Call to Action',
-  closingLine:   '🎬 Closing Line',
+  hook:         '🎯 Hook (First 5 Seconds)',
+  problem:      '⚠️ Problem Statement',
+  productIntro: '✨ Product Introduction',
+  benefits:     '💡 Key Benefits',
+  callToAction: '🔥 Call to Action',
+  closingLine:  '🎬 Closing Line',
 };
 
 export const SalesScriptPage: React.FC<{ guestAllowed?: boolean }> = ({ guestAllowed = false }) => {
@@ -68,6 +71,7 @@ export const SalesScriptPage: React.FC<{ guestAllowed?: boolean }> = ({ guestAll
   const [activeScript, setActiveScript] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(true);
 
   const toggleVersion = (id: string) => {
     setSelectedVersions(prev =>
@@ -91,7 +95,7 @@ export const SalesScriptPage: React.FC<{ guestAllowed?: boolean }> = ({ guestAll
 Product: ${productName}
 Description: ${description || 'Not specified'}
 Target Audience: ${audience || 'General audience'}
-Video Length: ${lengthObj.label} (${lengthObj.words})
+Video Length: ${lengthObj.fullLabel} (${lengthObj.words})
 Platforms: ${versionsToGenerate.map(v => v.label).join(', ')}
 
 Return ONLY valid JSON (no markdown, no explanation):
@@ -117,7 +121,7 @@ Rules:
 - Problem must be relatable and emotionally resonant
 - Benefits must be specific and tangible, not generic
 - CTA must be urgent and action-oriented
-- Total script must fit ${lengthObj.label} when read aloud at normal pace (${lengthObj.words})
+- Total script must fit ${lengthObj.fullLabel} when read aloud (${lengthObj.words})
 - Each platform version must have a distinctly different angle and energy`;
 
     try {
@@ -157,204 +161,264 @@ Rules:
     toast.success(`${variation.version} script copied!`);
   };
 
+  const selectedLengthObj = VIDEO_LENGTHS.find(l => l.id === videoLength)!;
   const activeVariation = scripts[activeScript];
 
   return (
     <DashboardLayout guestAllowed={guestAllowed}>
-      <div className="max-w-5xl mx-auto space-y-5">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Video size={24} className="text-[#EC4899]" />
-            Shorts & Reels Script Writer
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Generate viral-ready short-form video sales scripts</p>
-        </div>
+      <div className="flex flex-col lg:flex-row gap-6 min-h-full">
 
-        <div className="grid lg:grid-cols-5 gap-5">
-          {/* Left Controls */}
-          <div className="lg:col-span-2 space-y-4">
-            <InlineApiKeySetup />
+        {/* ── Left Sidebar ── */}
+        <div className="lg:w-72 flex-shrink-0 space-y-4">
 
-            <Card>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Product Details</h3>
-              <div className="space-y-3">
-                <Input label="Product / Service Name *" placeholder="e.g., PixelMind AI"
-                  value={productName} onChange={e => { setProductName(e.target.value); setError(''); }} />
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1.5">Product Description</label>
-                  <textarea
-                    placeholder="e.g., AI tool that generates metadata for stock photos in seconds"
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0d1030] text-sm focus:border-[#EC4899] focus:ring-2 focus:ring-[#EC4899]/20 outline-none resize-none text-gray-900 dark:text-white placeholder-gray-400"
-                  />
-                </div>
-                <Input label="Target Audience" placeholder="e.g., Stock photographers aged 20–45"
-                  value={audience} onChange={e => setAudience(e.target.value)} />
+          {/* Gradient header */}
+          <div className="rounded-2xl bg-gradient-to-br from-[#EC4899] to-[#D946EF] p-4 text-white shadow-lg shadow-[#EC4899]/25">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Video size={18} className="text-white" />
               </div>
-            </Card>
-
-            {/* Video Length */}
-            <Card>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Video Length</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {VIDEO_LENGTHS.map(l => (
-                  <button key={l.id} onClick={() => setVideoLength(l.id)}
-                    className={`p-3 rounded-xl border-2 transition-all text-center ${videoLength === l.id
-                      ? 'border-[#EC4899] bg-[#EC4899]/10'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-[#EC4899]/50'}`}>
-                    <p className={`text-sm font-bold ${videoLength === l.id ? 'text-[#EC4899]' : 'text-gray-800 dark:text-gray-200'}`}>{l.label}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{l.desc}</p>
-                  </button>
-                ))}
+              <div>
+                <p className="font-bold text-sm leading-tight">Script Settings</p>
+                <p className="text-white/70 text-[11px] leading-tight mt-0.5">
+                  {selectedLengthObj.fullLabel} · {selectedVersions.length} platform{selectedVersions.length > 1 ? 's' : ''}
+                </p>
               </div>
-            </Card>
-
-            {/* Platform Versions */}
-            <Card>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Platform Versions</h3>
-              <div className="space-y-2">
-                {VERSIONS.map(v => (
-                  <button key={v.id} onClick={() => toggleVersion(v.id)}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all text-left ${selectedVersions.includes(v.id)
-                      ? 'border-[#EC4899] bg-[#EC4899]/10'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-[#EC4899]/50'}`}>
-                    <span className="text-lg">{v.emoji}</span>
-                    <div>
-                      <p className={`text-sm font-semibold ${selectedVersions.includes(v.id) ? 'text-[#EC4899]' : 'text-gray-800 dark:text-gray-200'}`}>{v.label}</p>
-                      <p className="text-[10px] text-gray-400">{v.desc}</p>
-                    </div>
-                    <div className={`ml-auto w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedVersions.includes(v.id) ? 'border-[#EC4899] bg-[#EC4899]' : 'border-gray-300'}`}>
-                      {selectedVersions.includes(v.id) && <div className="w-2 h-2 bg-white rounded-full" />}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-
-            {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-                  {error.includes('No API') && (
-                    <Link to="/ai-settings" className="text-xs text-[#6366F1] underline mt-1 block">Configure API Keys →</Link>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <Button fullWidth size="lg" loading={loading} onClick={generate} icon={<Zap size={18} />}>
-              {loading ? 'Writing Script...' : 'Generate Script'}
-            </Button>
+            </div>
           </div>
 
-          {/* Right — Results */}
-          <div className="lg:col-span-3 space-y-4">
-            {loading && (
-              <Card>
-                <div className="animate-pulse space-y-4">
-                  {[1,2,3,4,5,6].map(i => (
-                    <div key={i} className="space-y-2">
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5" />
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
+          <InlineApiKeySetup />
 
-            {!loading && scripts.length > 0 && (
-              <>
-                {/* Platform tabs */}
-                {scripts.length > 1 && (
-                  <div className="flex gap-2">
-                    {scripts.map((s, i) => {
-                      const ver = VERSIONS.find(v => v.label === s.version);
+          {/* Collapsible settings */}
+          <Card padding="none">
+            <button
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-[#0d1030]/50 rounded-t-2xl transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Settings size={16} className="text-[#EC4899]" />
+                <span className="font-semibold text-gray-900 dark:text-white">Script Settings</span>
+              </div>
+              {settingsOpen
+                ? <ChevronUp size={16} className="text-gray-400" />
+                : <ChevronDown size={16} className="text-gray-400" />}
+            </button>
+
+            {settingsOpen && (
+              <div className="px-4 pb-4 space-y-5">
+                {/* Product details */}
+                <div className="space-y-3">
+                  <Input label="Product / Service Name *" placeholder="e.g., PixelMind AI"
+                    value={productName} onChange={e => { setProductName(e.target.value); setError(''); }} />
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1.5">Product Description</label>
+                    <textarea
+                      placeholder="e.g., AI tool that generates metadata for stock photos"
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0d1030] text-sm focus:border-[#EC4899] focus:ring-2 focus:ring-[#EC4899]/20 outline-none resize-none text-gray-900 dark:text-white placeholder-gray-400"
+                    />
+                  </div>
+                  <Input label="Target Audience" placeholder="e.g., Stock photographers 20–45"
+                    value={audience} onChange={e => setAudience(e.target.value)} />
+                </div>
+
+                <div className="h-px bg-gray-100 dark:bg-[#232650]" />
+
+                {/* Video length */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Video Length</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {VIDEO_LENGTHS.map(l => (
+                      <button key={l.id} onClick={() => setVideoLength(l.id)}
+                        className={`p-2.5 rounded-xl border-2 transition-all text-center ${videoLength === l.id
+                          ? 'border-[#EC4899] bg-[#EC4899]/10'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-[#EC4899]/50'}`}>
+                        <p className={`text-sm font-bold ${videoLength === l.id ? 'text-[#EC4899]' : 'text-gray-800 dark:text-gray-200'}`}>{l.label}</p>
+                        <p className="text-[9px] text-gray-400 mt-0.5">{l.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-gray-100 dark:bg-[#232650]" />
+
+                {/* Platform versions */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Platforms</p>
+                  <div className="space-y-1.5">
+                    {VERSIONS.map(v => (
+                      <button key={v.id} onClick={() => toggleVersion(v.id)}
+                        className={`w-full flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all text-left ${selectedVersions.includes(v.id)
+                          ? 'border-[#EC4899] bg-[#EC4899]/10'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-[#EC4899]/50'}`}>
+                        <span className="text-base">{v.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-bold ${selectedVersions.includes(v.id) ? 'text-[#EC4899]' : 'text-gray-800 dark:text-gray-200'}`}>{v.label}</p>
+                          <p className="text-[9px] text-gray-400 truncate">{v.desc}</p>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selectedVersions.includes(v.id) ? 'border-[#EC4899] bg-[#EC4899]' : 'border-gray-300'}`}>
+                          {selectedVersions.includes(v.id) && <div className="w-2 h-2 bg-white rounded-full" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Error */}
+                {error && (
+                  <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                    <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                      {error.includes('No API') && (
+                        <Link to="/ai-settings" className="text-xs text-[#6366F1] underline mt-1 block">Configure API Keys →</Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* ── Main Content ── */}
+        <div className="flex-1 space-y-4 min-w-0">
+
+          {/* Header */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#EC4899] to-[#D946EF] flex items-center justify-center shadow-md shadow-[#EC4899]/30 flex-shrink-0">
+                <Video size={18} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Shorts & Reels Script Writer</h1>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Viral scripts for</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EC4899] text-white">
+                    {selectedLengthObj.fullLabel}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EC4899]/15 text-[#EC4899] dark:bg-[#EC4899]/20 border border-[#EC4899]/30">
+                    {selectedVersions.length} platform{selectedVersions.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {scripts.length > 0 && (
+                <>
+                  <Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => activeVariation && copyScript(activeVariation)}>Copy Script</Button>
+                  <Button size="sm" variant="ghost" icon={<RefreshCw size={13} />} loading={loading} onClick={generate}>Regenerate</Button>
+                </>
+              )}
+              <Button size="sm" loading={loading} onClick={generate} disabled={!productName.trim()} icon={<Zap size={13} />}>
+                {loading ? 'Writing Script…' : 'Generate Script'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Loading */}
+          {loading && (
+            <Card>
+              <div className="animate-pulse space-y-4">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5" />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Results */}
+          {!loading && scripts.length > 0 && (
+            <>
+              {/* Platform tabs */}
+              {scripts.length > 1 && (
+                <div className="flex gap-2 flex-wrap">
+                  {scripts.map((s, i) => {
+                    const ver = VERSIONS.find(v => v.label === s.version);
+                    return (
+                      <button key={i} onClick={() => setActiveScript(i)}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${activeScript === i
+                          ? 'border-[#EC4899] bg-[#EC4899]/10 text-[#EC4899]'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-[#EC4899]/50'}`}>
+                        <span>{ver?.emoji}</span> {s.version}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {activeVariation && (
+                <Card>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white">{activeVariation.version} Script</p>
+                      <p className="text-xs text-gray-400">{videoLength}s · {selectedLengthObj.words}</p>
+                    </div>
+                  </div>
+
+                  {/* Viral hook alt */}
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-[#EC4899]/10 to-[#8B5CF6]/10 border border-[#EC4899]/20 mb-4">
+                    <p className="text-[10px] font-bold text-[#EC4899] uppercase tracking-wider mb-1">⚡ Alternative Viral Hook</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white italic">"{activeVariation.viralHook}"</p>
+                  </div>
+
+                  {/* Script sections */}
+                  <div className="space-y-3">
+                    {(Object.keys(activeVariation.script) as (keyof ScriptSection)[]).map(key => {
+                      const value = activeVariation.script[key];
+                      const color = SECTION_COLORS[key];
+                      const label = SECTION_LABELS[key];
                       return (
-                        <button key={i} onClick={() => setActiveScript(i)}
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all ${activeScript === i
-                            ? 'border-[#EC4899] bg-[#EC4899]/10 text-[#EC4899]'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-[#EC4899]/50'}`}>
-                          <span>{ver?.emoji}</span> {s.version}
-                        </button>
+                        <div key={key} className="group rounded-xl border p-3 transition-colors"
+                          style={{ borderColor: `${color}30`, backgroundColor: `${color}08` }}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-[11px] font-bold" style={{ color }}>{label}</p>
+                            <button
+                              onClick={() => {
+                                const text = Array.isArray(value) ? value.join('\n') : value;
+                                navigator.clipboard.writeText(text);
+                                toast.success('Copied!');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
+                              <Copy size={12} style={{ color }} />
+                            </button>
+                          </div>
+                          {Array.isArray(value) ? (
+                            <ul className="space-y-1">
+                              {value.map((item, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <Play size={10} className="flex-shrink-0 mt-1" style={{ color }} />
+                                  <p className="text-sm text-gray-800 dark:text-gray-200">{item}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{value}</p>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
-                )}
+                </Card>
+              )}
+            </>
+          )}
 
-                {activeVariation && (
-                  <Card>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white">{activeVariation.version} Script</p>
-                        <p className="text-xs text-gray-400">{videoLength} seconds · {VIDEO_LENGTHS.find(l => l.id === videoLength)?.words}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => copyScript(activeVariation)}>Copy</Button>
-                        <Button size="sm" variant="ghost" icon={<RefreshCw size={13} />} onClick={generate} loading={loading}>Regenerate</Button>
-                      </div>
-                    </div>
-
-                    {/* Viral hook alt */}
-                    <div className="p-3 rounded-xl bg-gradient-to-r from-[#EC4899]/10 to-[#8B5CF6]/10 border border-[#EC4899]/20 mb-4">
-                      <p className="text-[10px] font-bold text-[#EC4899] uppercase tracking-wider mb-1">⚡ Alternative Viral Hook</p>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-white italic">"{activeVariation.viralHook}"</p>
-                    </div>
-
-                    {/* Script sections */}
-                    <div className="space-y-3">
-                      {(Object.keys(activeVariation.script) as (keyof ScriptSection)[]).map(key => {
-                        const value = activeVariation.script[key];
-                        const color = SECTION_COLORS[key];
-                        const label = SECTION_LABELS[key];
-                        return (
-                          <div key={key} className="group rounded-xl border p-3 transition-colors"
-                            style={{ borderColor: `${color}30`, backgroundColor: `${color}08` }}>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <p className="text-[11px] font-bold" style={{ color }}>{label}</p>
-                              <button
-                                onClick={() => {
-                                  const text = Array.isArray(value) ? value.join('\n') : value;
-                                  navigator.clipboard.writeText(text);
-                                  toast.success('Copied!');
-                                }}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Copy size={12} style={{ color }} />
-                              </button>
-                            </div>
-                            {Array.isArray(value) ? (
-                              <ul className="space-y-1">
-                                {value.map((item, i) => (
-                                  <li key={i} className="flex items-start gap-2">
-                                    <Play size={10} className="flex-shrink-0 mt-1" style={{ color }} />
-                                    <p className="text-sm text-gray-800 dark:text-gray-200">{item}</p>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{value}</p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
-                )}
-              </>
-            )}
-
-            {!loading && scripts.length === 0 && (
-              <div className="text-center py-16 text-gray-400">
-                <Video size={48} className="mx-auto mb-3 opacity-30" />
-                <p className="font-medium">Your script will appear here</p>
-                <p className="text-sm mt-1">Fill in your product details and click Generate</p>
+          {/* Empty state */}
+          {!loading && scripts.length === 0 && (
+            <div className="text-center py-20 text-gray-400 dark:text-gray-600">
+              <div className="w-20 h-20 bg-[#EC4899]/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <Video size={36} className="text-[#EC4899] opacity-60" />
               </div>
-            )}
-          </div>
+              <p className="font-semibold text-gray-600 dark:text-gray-400">No scripts yet</p>
+              <p className="text-sm mt-1">Fill in your product details in the sidebar and click Generate</p>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
