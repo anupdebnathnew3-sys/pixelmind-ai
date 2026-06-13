@@ -622,8 +622,9 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     <DashboardLayout guestAllowed={guestAllowed}>
       <div className="flex flex-col lg:flex-row gap-6 min-h-full">
 
-        {/* ── Settings Sidebar ── */}
-        <div className="lg:w-72 flex-shrink-0 space-y-4">
+        {/* ── Settings Sidebar — sticky on desktop, scrolls independently ── */}
+        <div className="lg:w-72 flex-shrink-0">
+          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-1 lg:pb-4">
           {/* Gradient header card */}
           <div className="rounded-2xl bg-gradient-to-br from-[#6366F1] to-[#8B5CF6] p-4 text-white shadow-lg shadow-[#6366F1]/25">
             <div className="flex items-center gap-3">
@@ -874,7 +875,8 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               </div>
             </Card>
           )}
-        </div>
+          </div>{/* end sticky inner */}
+        </div>{/* end sidebar width wrapper */}
 
         {/* ── Main Content ── */}
         <div className="flex-1 space-y-4 min-w-0">
