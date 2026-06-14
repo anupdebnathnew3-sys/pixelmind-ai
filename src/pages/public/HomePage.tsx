@@ -272,7 +272,7 @@ export const HomePage: React.FC = () => {
               Start Generating Free
             </Link>
             {/* Try Metadata Generator — animated cursor draws attention */}
-            <div className="relative inline-flex flex-col items-center pb-7">
+            <div className="relative inline-flex">
               <Link
                 to="/tools/metadata"
                 className="flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-white/8 hover:bg-white/15 text-white font-semibold text-base border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5"
