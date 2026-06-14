@@ -34,7 +34,7 @@ function buildXMPXML(m: EmbedMetadata): string {
     ? `\n   <xmp:Rating>${m.rating}</xmp:Rating>`
     : '';
   return `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="PixelMind AI">
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <rdf:Description rdf:about=""
     xmlns:dc="http://purl.org/dc/elements/1.1/"
@@ -47,8 +47,7 @@ function buildXMPXML(m: EmbedMetadata): string {
 ${kws}
     </rdf:Bag>
    </dc:subject>${rights}${creator}
-   <photoshop:Headline>${escX(m.title)}</photoshop:Headline>
-   <xmp:CreatorTool>PixelMind AI</xmp:CreatorTool>${rating}
+   <photoshop:Headline>${escX(m.title)}</photoshop:Headline>${rating}
   </rdf:Description>
  </rdf:RDF>
 </x:xmpmeta>
@@ -326,7 +325,6 @@ function embedInPNG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
     buildPNGiTXt('Description',         m.description),
     buildPNGiTXt('Comment',             m.description),
     buildPNGiTXt('Keywords',            m.keywords.join(', ')),
-    buildPNGiTXt('Software',            'PixelMind AI'),
     ...(m.copyright ? [buildPNGiTXt('Copyright', m.copyright)] : []),
     ...(m.creator   ? [buildPNGiTXt('Author',    m.creator)]   : []),
     ...(m.rating    ? [buildPNGiTXt('Rating',    String(m.rating))] : []),

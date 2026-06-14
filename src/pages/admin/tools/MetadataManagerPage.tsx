@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/Input';
 import { Toggle } from '../../../components/ui/Card';
 import { useAdminStore } from '../../../store/useAdminStore';
 import { ToolManagerTemplate } from './ToolManagerTemplate';
-import { Image, Save, Hash, Download, Shield } from 'lucide-react';
+import { Image, Save, Hash, Download, Shield, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const MetadataManagerPage: React.FC = () => {
@@ -24,12 +24,17 @@ export const MetadataManagerPage: React.FC = () => {
 
   const [guestAllowed, setGuestAllowed] = useState(get('meta_guest_allowed', 'true') === 'true');
   const [bulkAllowed, setBulkAllowed] = useState(get('meta_bulk_allowed', 'true') === 'true');
-  const [embedEnabled, setEmbedEnabled] = useState(get('meta_embed_enabled', 'true') === 'true');
-  const [zipEnabled,   setZipEnabled]   = useState(get('meta_zip_enabled',   'true') === 'true');
+  const [embedEnabled,        setEmbedEnabled]        = useState(get('meta_embed_enabled',        'true')  === 'true');
+  const [zipEnabled,          setZipEnabled]          = useState(get('meta_zip_enabled',          'true')  === 'true');
+  const [premiumRestricted,   setPremiumRestricted]   = useState(get('meta_embed_premium_only',   'true')  === 'true');
   const [embedSettings, setEmbedSettings] = useState({
-    meta_embed_copyright: get('meta_embed_copyright', ''),
-    meta_embed_creator:   get('meta_embed_creator', ''),
-    meta_embed_website:   get('meta_embed_website', ''),
+    meta_embed_copyright:       get('meta_embed_copyright', ''),
+    meta_embed_creator:         get('meta_embed_creator', ''),
+    meta_embed_website:         get('meta_embed_website', ''),
+  });
+  const [accessSettings, setAccessSettings] = useState({
+    meta_upgrade_popup_title:   get('meta_upgrade_popup_title',   'Premium Feature'),
+    meta_upgrade_popup_message: get('meta_upgrade_popup_message', 'Metadata Embedding and ZIP Export are Premium Features. Upgrade to Pro or Max to unlock advanced metadata tools.'),
   });
 
   const save = () => {
@@ -44,10 +49,16 @@ export const MetadataManagerPage: React.FC = () => {
   const saveEmbed = () => {
     bulkUpdateCMSContent({
       ...embedSettings,
-      meta_embed_enabled: embedEnabled ? 'true' : 'false',
-      meta_zip_enabled:   zipEnabled   ? 'true' : 'false',
+      meta_embed_enabled:       embedEnabled      ? 'true' : 'false',
+      meta_zip_enabled:         zipEnabled        ? 'true' : 'false',
+      meta_embed_premium_only:  premiumRestricted ? 'true' : 'false',
     });
     toast.success('Embedding settings saved');
+  };
+
+  const saveAccess = () => {
+    bulkUpdateCMSContent(accessSettings);
+    toast.success('Access control settings saved');
   };
 
   return (
@@ -152,6 +163,62 @@ export const MetadataManagerPage: React.FC = () => {
               ))}
             </div>
             <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2">Metadata is injected as binary segments — image pixels and compression are never touched.</p>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <Lock size={16} className="text-[#6366F1]" />
+            <h2 className="font-bold text-gray-900 dark:text-white">Access Control</h2>
+          </div>
+          <Button size="sm" icon={<Save size={14} />} onClick={() => { saveEmbed(); saveAccess(); }}>Save</Button>
+        </div>
+
+        {/* Premium restriction toggle */}
+        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#191c40] rounded-xl mb-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Premium Restriction</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              When enabled, Embed · ZIP · CSV require Pro or Max plan. Guests can always use these features.
+            </p>
+          </div>
+          <Toggle checked={premiumRestricted} onChange={setPremiumRestricted} label="" />
+        </div>
+
+        {/* Plan access summary */}
+        <div className="grid sm:grid-cols-3 gap-3 mb-4">
+          {[
+            { plan: 'Guest',        access: 'Full Access',    color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', badge: 'border-emerald-200 dark:border-emerald-700/40' },
+            { plan: 'Free',         access: premiumRestricted ? 'Generate Only' : 'Full Access', color: premiumRestricted ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400', bg: premiumRestricted ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20', badge: premiumRestricted ? 'border-amber-200 dark:border-amber-700/40' : 'border-emerald-200 dark:border-emerald-700/40' },
+            { plan: 'Pro / Max',    access: 'Full Access',    color: 'text-[#6366F1] dark:text-[#A5B4FC]',   bg: 'bg-[#EEF2FF] dark:bg-[#6366F1]/15',     badge: 'border-[#A5B4FC]/40 dark:border-[#6366F1]/30' },
+          ].map(row => (
+            <div key={row.plan} className={`p-3 rounded-xl border ${row.bg} ${row.badge}`}>
+              <p className="text-xs font-bold text-gray-700 dark:text-gray-200">{row.plan}</p>
+              <p className={`text-xs font-semibold mt-0.5 ${row.color}`}>{row.access}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Upgrade popup text */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Upgrade Popup Text</p>
+          <Input
+            label="Popup Title"
+            placeholder="Premium Feature"
+            value={accessSettings.meta_upgrade_popup_title}
+            onChange={e => setAccessSettings(s => ({ ...s, meta_upgrade_popup_title: e.target.value }))}
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Popup Message</label>
+            <textarea
+              rows={3}
+              placeholder="Metadata Embedding and ZIP Export are Premium Features…"
+              value={accessSettings.meta_upgrade_popup_message}
+              onChange={e => setAccessSettings(s => ({ ...s, meta_upgrade_popup_message: e.target.value }))}
+              className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-[#232650] bg-white dark:bg-[#0d1030] text-gray-800 dark:text-gray-200 outline-none focus:border-[#6366F1] transition-colors resize-none"
+            />
           </div>
         </div>
       </Card>

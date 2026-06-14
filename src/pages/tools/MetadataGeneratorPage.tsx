@@ -19,6 +19,7 @@ import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
 import { useAdminStore } from '../../store/useAdminStore';
 import { triggerDownload, buildZIPPackage } from '../../services/metadataEmbedService';
 import type { ZIPItem } from '../../services/metadataEmbedService';
+import { MetadataUpgradeModal } from '../../components/metadata/MetadataUpgradeModal';
 
 const MARKETPLACES = [
   { id: 'Adobe Stock', icon: '🅐', color: '#FF0000' },
@@ -318,14 +319,20 @@ interface MetadataGeneratorPageProps {
 }
 
 export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ guestAllowed = false }) => {
-  const { deductCredits, isAuthenticated } = useStore();
+  const { deductCredits, isAuthenticated, user } = useStore();
   const { deductGuestCredit, incrementGenerations, guestCredits } = useGuestStore();
   const guestGenCount = useRef(0);
   const { getTemplate } = usePromptStore();
   const { cmsContent } = useAdminStore();
-  const embedEnabled   = (cmsContent['meta_embed_enabled']   ?? 'true') === 'true';
+  const embedEnabled        = (cmsContent['meta_embed_enabled']        ?? 'true')  === 'true';
+  const isPremiumRestricted = (cmsContent['meta_embed_premium_only']   ?? 'true')  === 'true';
+  const upgradePopupTitle   = cmsContent['meta_upgrade_popup_title']   || 'Premium Feature';
+  const upgradePopupMessage = cmsContent['meta_upgrade_popup_message'] || 'Metadata Embedding and ZIP Export are Premium Features. Upgrade to Pro or Max to unlock advanced metadata tools.';
   const embedCopyright = cmsContent['meta_embed_copyright'] ?? '';
   const embedCreator   = cmsContent['meta_embed_creator']   ?? '';
+  // Guests (not authenticated) can always use embed; free authenticated users cannot
+  const isPremiumPlan = user?.plan === 'pro' || user?.plan === 'enterprise' || (user?.plan as string) === 'max';
+  const canUseEmbedFeatures = !isPremiumRestricted || !isAuthenticated || isPremiumPlan;
   const metadataCache = useRef<Map<string, Partial<ImageFile>>>(new Map());
   const getCacheKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
   const _persisted = useRef(loadPersistedSettings());
@@ -338,6 +345,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [categoryDropOpen, setCategoryDropOpen] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [globalAuthor, setGlobalAuthor] = useState(_persisted.current.author);
   const [globalCopyright, setGlobalCopyright] = useState(_persisted.current.copyright);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -906,7 +914,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                   size="sm"
                   loading={zipLoading}
                   icon={zipLoading ? <Layers size={13} /> : <Archive size={13} />}
-                  onClick={downloadAllAsZIP}
+                  onClick={canUseEmbedFeatures ? downloadAllAsZIP : () => setShowUpgradeModal(true)}
                 >
                   {zipLoading ? 'Building ZIP…' : `Embed All & Download ZIP (${doneCount})`}
                 </Button>
@@ -927,7 +935,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                     <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden min-w-[200px] py-1">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2 pb-1">{doneCount} file{doneCount !== 1 ? 's' : ''} ready</p>
                       {([
-                        { fmt: 'CSV',  desc: 'Spreadsheet-ready', color: '#10B981', bg: '#10B98118', action: exportCSV },
+                        { fmt: 'CSV',  desc: 'Spreadsheet-ready', color: '#10B981', bg: '#10B98118', action: canUseEmbedFeatures ? exportCSV : () => { setExportOpen(false); setShowUpgradeModal(true); } },
                         { fmt: 'XLSX', desc: 'Excel format',       color: '#3B82F6', bg: '#3B82F618', action: () => { toast.success('XLSX coming soon!'); setExportOpen(false); } },
                         { fmt: 'JSON', desc: 'Structured data',    color: '#8B5CF6', bg: '#8B5CF618', action: exportJSON },
                       ] as const).map(({ fmt, desc, color, bg, action }) => (
@@ -1389,7 +1397,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                         </div>
 
                         {/* ── METADATA CONFIG BAR (rating / author / copyright) ── */}
-                        {isDone && embedEnabled && (
+                        {isDone && embedEnabled && canUseEmbedFeatures && (
                           <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-[#EEF2FF]/40 dark:from-[#0d1030]/60 dark:to-[#6366F1]/5 border-t border-gray-100 dark:border-[#232650] space-y-2.5">
 
                             {/* Rating stars + Author + Copyright */}
@@ -1503,7 +1511,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               {/* Primary action: ZIP with embedded images */}
               {embedEnabled && (
                 <button
-                  onClick={() => { setShowExportModal(false); downloadAllAsZIP(); }}
+                  onClick={() => { setShowExportModal(false); if (canUseEmbedFeatures) { downloadAllAsZIP(); } else { setShowUpgradeModal(true); } }}
                   className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 border-[#6366F1]/40 bg-gradient-to-br from-[#EEF2FF] to-[#F5F3FF] dark:from-[#6366F1]/15 dark:to-[#8B5CF6]/10 hover:shadow-lg hover:scale-[1.01] transition-all group mb-3"
                 >
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-md bg-gradient-to-br from-[#6366F1] to-[#8B5CF6]">
@@ -1523,7 +1531,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Metadata only (no images)</p>
               <div className="grid grid-cols-2 gap-2.5">
                 {([
-                  { fmt: 'CSV',  label: 'Spreadsheet', color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: exportCSV },
+                  { fmt: 'CSV',  label: 'Spreadsheet', color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: canUseEmbedFeatures ? exportCSV : () => { setShowExportModal(false); setShowUpgradeModal(true); } },
                   { fmt: 'XLSX', label: 'Excel Format', color: '#3B82F6', bg: 'from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10',             border: 'border-blue-200 dark:border-blue-700/40',    action: () => toast.success('XLSX coming soon!') },
                   { fmt: 'JSON', label: 'Structured',   color: '#8B5CF6', bg: 'from-violet-50 to-violet-50 dark:from-violet-900/20 dark:to-violet-900/10',     border: 'border-violet-200 dark:border-violet-700/40', action: exportJSON },
                 ] as const).map(({ fmt, label, color, bg, border, action }) => (
@@ -1553,6 +1561,14 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
           </div>
         </div>
       )}
+
+      {/* ── Premium Upgrade Modal ── */}
+      <MetadataUpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        title={upgradePopupTitle}
+        message={upgradePopupMessage}
+      />
 
       {/* ── Lightbox Modal ── */}
       {lightboxSrc && (
