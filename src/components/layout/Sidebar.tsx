@@ -10,7 +10,7 @@ import {
   Shield, Bot, BarChart3, Globe, Calculator, DollarSign,
   Lock, Navigation, Palette, Scale, Home, Mail, Users,
   Image as ImageIcon, BellRing, Search, Database,
-  PanelTop, Megaphone, Mic2, Type, Video
+  PanelTop, Megaphone, Mic2, Type, Video, Sparkles
 } from 'lucide-react';
 
 interface NavItem {
@@ -25,15 +25,25 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/dashboard' },
   {
-    id: 'tools', label: 'Tools', icon: <Wrench size={18} />, path: '/tools',
+    id: 'ai-content', label: 'AI Content & Metadata', icon: <Sparkles size={18} />, path: '/tools/ai-content',
     children: [
-      { id: 'metadata', label: 'AI Metadata Generator', icon: <Image size={16} />, path: '/tools/metadata', badge: 'Core' },
-      { id: 'img2prompt', label: 'Image To Prompt', icon: <ImagePlus size={16} />, path: '/tools/image-to-prompt' },
-      { id: 'content', label: 'AI Content Writer', icon: <FileText size={16} />, path: '/tools/content-writer' },
-{ id: 'wordcount', label: 'Word Counter', icon: <Hash size={16} />, path: '/tools/word-counter' },
-      { id: 'slogan', label: 'Slogan Generator', icon: <MessageSquare size={16} />, path: '/tools/slogan-generator' },
-      { id: 'age-calc', label: 'Age Calculator', icon: <Calculator size={16} />, path: '/tools/age-calculator' },
-      { id: 'event-cal', label: 'Event Calendar', icon: <Calendar size={16} />, path: '/tools/event-calendar' },
+      { id: 'metadata',   label: 'AI Metadata Generator', icon: <Image size={16} />,       path: '/tools/metadata',         badge: 'Core' },
+      { id: 'img2prompt', label: 'Image To Prompt',       icon: <ImagePlus size={16} />,   path: '/tools/image-to-prompt' },
+      { id: 'content',    label: 'AI Content Writer',     icon: <FileText size={16} />,    path: '/tools/content-writer' },
+      { id: 'slogan',     label: 'Slogan Generator',      icon: <MessageSquare size={16} />, path: '/tools/slogan-generator' },
+    ]
+  },
+  {
+    id: 'text-tools', label: 'Text & Word Tools', icon: <Hash size={18} />, path: '/tools/text',
+    children: [
+      { id: 'wordcount', label: 'Word Counter', icon: <Hash size={16} />, path: '/tools/word-counter' },
+    ]
+  },
+  {
+    id: 'calc-planning', label: 'Calculators & Planning', icon: <Calculator size={18} />, path: '/tools/calculators',
+    children: [
+      { id: 'age-calc',  label: 'Age Calculator', icon: <Calculator size={16} />, path: '/tools/age-calculator' },
+      { id: 'event-cal', label: 'Event Calendar', icon: <Calendar size={16} />,   path: '/tools/event-calendar' },
     ]
   },
   {
