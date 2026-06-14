@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn';
 import { useStore } from '../../store/useStore';
 import { useAdminStore } from '../../store/useAdminStore';
 import {
-  LayoutDashboard, Wrench, FileText, Clock,
+  LayoutDashboard, Wrench, FileText, Clock, Image, Calendar, Calculator,
   Settings, CreditCard, User, LogOut, ChevronLeft,
   ChevronRight, Zap, MessageSquare, Hash, ImagePlus, ChevronDown,
   Shield, Bot, BarChart3, Globe, DollarSign,
@@ -27,8 +27,49 @@ const navItems: NavItem[] = [
   {
     id: 'tools', label: 'Tools', icon: <Wrench size={18} />, path: '/tools',
     children: [
-      { id: 'tools-tour', label: 'Tour', icon: <Sparkles size={16} />, path: '/tools' },
-    ]
+      {
+        id: 'ai-content', label: 'AI Content & Metadata', icon: <Sparkles size={16} />, path: '/tools/ai-content',
+        children: [
+          { id: 'metadata',   label: 'AI Metadata Generator', icon: <Image size={14} />,         path: '/tools/metadata',         badge: 'Core' },
+          { id: 'img2prompt', label: 'Image To Prompt',       icon: <ImagePlus size={14} />,     path: '/tools/image-to-prompt' },
+          { id: 'content',    label: 'AI Content Writer',     icon: <FileText size={14} />,      path: '/tools/content-writer' },
+          { id: 'slogan',     label: 'Slogan Generator',      icon: <MessageSquare size={14} />, path: '/tools/slogan-generator' },
+        ],
+      },
+      {
+        id: 'text-tools', label: 'Text & Word Tools', icon: <Hash size={16} />, path: '/tools/text',
+        children: [
+          { id: 'wordcount', label: 'Word Counter', icon: <Hash size={14} />, path: '/tools/word-counter' },
+        ],
+      },
+      {
+        id: 'calc-planning', label: 'Calculators & Planning', icon: <Calculator size={16} />, path: '/tools/calculators',
+        children: [
+          { id: 'age-calc',  label: 'Age Calculator', icon: <Calculator size={14} />, path: '/tools/age-calculator' },
+          { id: 'event-cal', label: 'Event Calendar', icon: <Calendar size={14} />,   path: '/tools/event-calendar' },
+        ],
+      },
+      {
+        id: 'branding', label: 'Color & Branding', icon: <Palette size={16} />, path: '/tools/branding',
+        children: [
+          { id: 'color-palette', label: 'Color Palette Generator', icon: <Palette size={14} />, path: '/tools/color-palette', badge: 'New' },
+          { id: 'brand-voice',   label: 'Brand Voice & Slogans',   icon: <Mic2 size={14} />,    path: '/tools/brand-voice',   badge: 'New' },
+        ],
+      },
+      {
+        id: 'typography', label: 'Typography & Fonts', icon: <Type size={16} />, path: '/tools/typography',
+        children: [
+          { id: 'font-pairing', label: 'Font Pairing Assistant', icon: <Type size={14} />, path: '/tools/font-pairing', badge: 'New' },
+        ],
+      },
+      {
+        id: 'marketing', label: 'Marketing Tools', icon: <Megaphone size={16} />, path: '/tools/marketing',
+        children: [
+          { id: 'ad-copy',      label: 'Ad Copywriter',       icon: <Megaphone size={14} />, path: '/tools/ad-copywriter', badge: 'New' },
+          { id: 'sales-script', label: 'Reels Script Writer', icon: <Video size={14} />,     path: '/tools/sales-script',  badge: 'New' },
+        ],
+      },
+    ],
   },
   { id: 'history', label: 'History', icon: <Clock size={18} />, path: '/history' },
   { id: 'ai-settings', label: 'AI Settings', icon: <Bot size={18} />, path: '/ai-settings' },
@@ -142,6 +183,13 @@ const adminItems: NavItem[] = [
   },
 ];
 
+const hasActiveDescendant = (item: NavItem, pathname: string): boolean => {
+  if (!item.children) return false;
+  return item.children.some(c =>
+    pathname === c.path || pathname.startsWith(c.path + '/') || hasActiveDescendant(c, pathname)
+  );
+};
+
 interface SidebarNavItemProps {
   item: NavItem;
   collapsed: boolean;
@@ -151,18 +199,17 @@ interface SidebarNavItemProps {
 const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level = 0 }) => {
   const location = useLocation();
   const [expanded, setExpanded] = useState(() =>
-    item.children?.some(c => location.pathname.startsWith(c.path)) || location.pathname === item.path
+    hasActiveDescendant(item, location.pathname) || location.pathname === item.path
   );
 
   useEffect(() => {
-    if (item.children?.some(c => location.pathname.startsWith(c.path))) {
+    if (hasActiveDescendant(item, location.pathname)) {
       setExpanded(true);
     }
-  }, [location.pathname, item.children]);
+  }, [location.pathname, item]);
 
-  const isActive = location.pathname === item.path ||
-    (item.children && item.children.some(c => location.pathname === c.path));
-  const isParentOfActive = item.children?.some(c => location.pathname.startsWith(c.path));
+  const isActive = location.pathname === item.path && !item.children;
+  const isParentOfActive = hasActiveDescendant(item, location.pathname);
 
   if (item.children && collapsed) {
     return (
@@ -211,32 +258,36 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level 
   }
 
   if (item.children && !collapsed) {
+    const isCategory = level === 1;
     return (
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
           className={cn(
-            'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group',
+            'w-full flex items-center justify-between rounded-xl font-medium transition-all duration-200 group',
+            isCategory ? 'px-2 py-1.5 text-xs' : 'px-3 py-2.5 text-sm',
             isParentOfActive
-              ? 'bg-[#EEF2FF] text-[#6366F1] dark:bg-[#6366F1]/20 dark:text-[#A5B4FC]'
+              ? isCategory
+                ? 'text-[#6366F1] dark:text-[#A5B4FC]'
+                : 'bg-[#EEF2FF] text-[#6366F1] dark:bg-[#6366F1]/20 dark:text-[#A5B4FC]'
               : 'text-slate-600 dark:text-gray-400 hover:bg-[#F0F4FB] dark:hover:bg-[#232650] hover:text-slate-900 dark:hover:text-gray-200'
           )}
         >
-          <span className="flex items-center gap-3">
+          <span className={cn('flex items-center', isCategory ? 'gap-1.5' : 'gap-3')}>
             <span className={cn(isParentOfActive ? 'text-[#6366F1] dark:text-[#A5B4FC]' : 'text-slate-400 group-hover:text-slate-600 dark:text-gray-400 dark:group-hover:text-gray-300')}>
               {item.icon}
             </span>
             {item.label}
           </span>
           <ChevronDown
-            size={14}
+            size={isCategory ? 11 : 14}
             className={cn('transition-transform duration-200', expanded && 'rotate-180')}
           />
         </button>
         {expanded && (
-          <div className="mt-1 ml-3 pl-3 border-l-2 border-[#A5B4FC]/30 space-y-0.5">
+          <div className={cn('space-y-0.5', isCategory ? 'mt-0.5 ml-2 pl-2 border-l border-[#A5B4FC]/30' : 'mt-1 ml-3 pl-3 border-l-2 border-[#A5B4FC]/30')}>
             {item.children.map(child => (
-              <SidebarNavItem key={child.id} item={child} collapsed={false} level={1} />
+              <SidebarNavItem key={child.id} item={child} collapsed={false} level={level + 1} />
             ))}
           </div>
         )}
@@ -254,7 +305,8 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level 
           ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
           : 'text-slate-600 dark:text-gray-400 hover:bg-[#F0F4FB] dark:hover:bg-[#232650] hover:text-slate-900 dark:hover:text-gray-200',
         collapsed && 'justify-center px-2',
-        level > 0 && 'text-xs py-2'
+        level === 1 && 'text-xs py-2',
+        level >= 2 && 'text-xs py-1.5'
       )}
     >
       <span className={cn('flex-shrink-0', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:text-gray-400 dark:group-hover:text-gray-300')}>
