@@ -1026,23 +1026,71 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
             </div>
           ) : (
             /* Compact "images loaded" bar */
-            <div className="bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl px-4 py-3 flex items-center gap-3">
               <input {...getInputProps()} />
-              <div className="flex items-center gap-3 min-w-0">
+
+              {/* Left — icon + count */}
+              <div className="flex items-center gap-3 flex-shrink-0">
                 <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] dark:bg-[#6366F1]/20 flex items-center justify-center flex-shrink-0">
                   <Image size={16} className="text-[#6366F1]" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                <div className="leading-tight">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
                     {totalCount} image{totalCount !== 1 ? 's' : ''} loaded
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">
-                    {images.filter(i => i.status === 'pending').length > 0
-                      ? `${images.filter(i => i.status === 'pending').length} pending generation`
-                      : doneCount > 0 ? `${doneCount} processed` : 'Processing…'}
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                    {doneCount}/{totalCount} processed
                   </p>
                 </div>
               </div>
+
+              {/* Centre — progress bar + status pills */}
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5 px-2">
+                {/* Progress bar */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-gray-100 dark:bg-[#0d1030] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] rounded-full transition-all duration-500"
+                      style={{ width: `${totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#6366F1] dark:text-[#A5B4FC] flex-shrink-0 w-8 text-right">
+                    {totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0}%
+                  </span>
+                </div>
+
+                {/* Status pills */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {doneCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 dark:bg-green-900/25 text-green-700 dark:text-green-400">
+                      <CheckCircle2 size={9} />{doneCount} done
+                    </span>
+                  )}
+                  {images.filter(i => i.status === 'processing').length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/25 text-blue-700 dark:text-blue-400">
+                      <span className="w-2 h-2 border border-blue-500 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+                      Processing
+                    </span>
+                  )}
+                  {images.filter(i => i.status === 'pending').length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/25 text-amber-700 dark:text-amber-400">
+                      {images.filter(i => i.status === 'pending').length} pending
+                    </span>
+                  )}
+                  {images.filter(i => i.status === 'error').length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 dark:bg-red-900/25 text-red-700 dark:text-red-400">
+                      {images.filter(i => i.status === 'error').length} failed
+                    </span>
+                  )}
+                  {doneCount === totalCount && totalCount > 0 && !isGenerating && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#6366F1]/10 dark:bg-[#6366F1]/20 text-[#6366F1] dark:text-[#A5B4FC]">
+                      All complete
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Right — Add More */}
               <button
                 onClick={open}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#6366F1] dark:text-[#A5B4FC] bg-[#EEF2FF] dark:bg-[#6366F1]/15 rounded-lg hover:bg-[#6366F1] hover:text-white dark:hover:bg-[#6366F1] dark:hover:text-white transition-colors border border-[#A5B4FC]/40 dark:border-[#6366F1]/25 flex-shrink-0"
