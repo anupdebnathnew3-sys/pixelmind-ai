@@ -47,6 +47,10 @@ interface Workspace {
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+const clean = (s: string) =>
+  s.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1')
+   .replace(/__(.*?)__/g, '$1').replace(/_(.*?)_/g, '$1').trim();
+
 const empty = (): Workspace => ({
   tagline: '',
   brandVoice: '',
@@ -247,11 +251,11 @@ All values must match the ${selectedTone?.label} tone. Keep each slogan under 10
       };
       setWorkspace(w => ({
         ...w,
-        tagline: parsed.tagline || '',
-        brandVoice: parsed.brandVoice || '',
-        slogans: parsed.slogans?.map(s => ({ id: uid(), text: s, starred: false })) ?? [],
-        hooks: parsed.marketingHooks?.map(h => ({ id: uid(), text: h, starred: false })) ?? [],
-        positioning: parsed.positioningStatement || '',
+        tagline: clean(parsed.tagline || ''),
+        brandVoice: clean(parsed.brandVoice || ''),
+        slogans: parsed.slogans?.map(s => ({ id: uid(), text: clean(s), starred: false })) ?? [],
+        hooks: parsed.marketingHooks?.map(h => ({ id: uid(), text: clean(h), starred: false })) ?? [],
+        positioning: clean(parsed.positioningStatement || ''),
       }));
       deductCredits(1);
       toast.success('Brand voice generated!');
