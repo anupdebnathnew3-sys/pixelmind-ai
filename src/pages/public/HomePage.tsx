@@ -184,6 +184,25 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0d1030]">
+      <style>{`
+        @keyframes metaBtnGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(165,180,252,0); }
+          50%       { box-shadow: 0 0 0 7px rgba(165,180,252,0.18); }
+        }
+        @keyframes metaCursorFloat {
+          0%        { transform: translate(0px, 0px)   scale(1);    }
+          35%       { transform: translate(-3px, -9px) scale(1);    }
+          48%       { transform: translate(-3px, -9px) scale(0.8);  }
+          58%       { transform: translate(-3px, -9px) scale(1);    }
+          100%      { transform: translate(0px, 0px)   scale(1);    }
+        }
+        @keyframes metaClickRing {
+          0%,  44% { transform: translate(-50%,-50%) scale(0);   opacity: 0;   }
+          48%       { transform: translate(-50%,-50%) scale(0.2); opacity: 0.9; }
+          72%       { transform: translate(-50%,-50%) scale(2.8); opacity: 0;   }
+          100%      { transform: translate(-50%,-50%) scale(0);   opacity: 0;   }
+        }
+      `}</style>
       <PublicNavbar />
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -252,13 +271,39 @@ export const HomePage: React.FC = () => {
               <Wand2 size={18} />
               Start Generating Free
             </Link>
-            <Link
-              to="/tools/metadata"
-              className="flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-white/8 hover:bg-white/15 text-white font-semibold text-base border border-white/15 hover:border-white/25 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5"
-            >
-              <ImageIcon size={18} className="text-[#A5B4FC]" />
-              Try Metadata Generator
-            </Link>
+            {/* Try Metadata Generator — animated cursor draws attention */}
+            <div className="relative inline-flex flex-col items-center pb-7">
+              <Link
+                to="/tools/metadata"
+                className="flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-white/8 hover:bg-white/15 text-white font-semibold text-base border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5"
+                style={{ animation: 'metaBtnGlow 2.6s ease-in-out infinite' }}
+              >
+                <ImageIcon size={18} className="text-[#A5B4FC]" />
+                Try Metadata Generator
+              </Link>
+
+              {/* Animated cursor + click ripple */}
+              <div
+                className="absolute bottom-0 right-8 pointer-events-none select-none"
+                style={{ animation: 'metaCursorFloat 2.6s ease-in-out infinite' }}
+              >
+                {/* Standard arrow cursor SVG */}
+                <svg width="22" height="26" viewBox="0 0 22 26" fill="none">
+                  <path
+                    d="M2 2L2 20L7 15L10.5 22.5L13 21.5L9.5 14L16 14L2 2Z"
+                    fill="white"
+                    stroke="#6366F1"
+                    strokeWidth="1.4"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {/* Click ripple at cursor tip */}
+                <div
+                  className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[#A5B4FC]"
+                  style={{ animation: 'metaClickRing 2.6s ease-in-out infinite' }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-5 text-sm text-[#71717A]">
