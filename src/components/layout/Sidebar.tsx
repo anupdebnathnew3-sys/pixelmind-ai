@@ -218,13 +218,16 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level 
           onClick={() => setExpanded(v => !v)}
           title={item.label}
           className={cn(
-            'w-full flex items-center justify-center px-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
+            'w-full flex items-center justify-center rounded-xl font-medium transition-all duration-200 group relative',
+            level === 0 ? 'px-2 py-2.5' : 'px-2 py-1.5',
             isParentOfActive || expanded
-              ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
+              ? level === 0
+                ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
+                : 'text-[#6366F1] dark:text-[#A5B4FC]'
               : 'text-slate-600 dark:text-gray-400 hover:bg-[#F0F4FB] dark:hover:bg-[#232650] hover:text-slate-900 dark:hover:text-gray-200'
           )}
         >
-          <span className={cn('flex-shrink-0', (isParentOfActive || expanded) ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:text-gray-400 dark:group-hover:text-gray-300')}>
+          <span className={cn('flex-shrink-0', (isParentOfActive || expanded) && level === 0 ? 'text-white' : isParentOfActive || expanded ? 'text-[#6366F1] dark:text-[#A5B4FC]' : 'text-slate-400 group-hover:text-slate-600 dark:text-gray-400 dark:group-hover:text-gray-300')}>
             {item.icon}
           </span>
           <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
@@ -232,24 +235,9 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level 
           </div>
         </button>
         {expanded && (
-          <div className="mt-0.5 space-y-0.5">
+          <div className={cn('mt-0.5 space-y-0.5', level > 0 && 'ml-1 pl-1 border-l border-[#A5B4FC]/30')}>
             {item.children.map(child => (
-              <Link
-                key={child.id}
-                to={child.path}
-                title={child.label}
-                className={cn(
-                  'flex items-center justify-center p-2 rounded-xl transition-all duration-200 group relative',
-                  location.pathname === child.path
-                    ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
-                    : 'text-slate-400 dark:text-gray-500 hover:bg-[#F0F4FB] dark:hover:bg-[#232650] hover:text-slate-700 dark:hover:text-gray-300'
-                )}
-              >
-                <span className="flex-shrink-0">{child.icon}</span>
-                <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                  {child.label}
-                </div>
-              </Link>
+              <SidebarNavItem key={child.id} item={child} collapsed={true} level={level + 1} />
             ))}
           </div>
         )}
@@ -300,13 +288,12 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ item, collapsed, level 
       to={item.path}
       title={collapsed ? item.label : undefined}
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
+        'flex items-center gap-3 rounded-xl font-medium transition-all duration-200 group relative',
+        collapsed ? (level === 0 ? 'px-2 py-2.5' : 'px-2 py-1.5') : (level === 0 ? 'px-3 py-2.5 text-sm' : level === 1 ? 'px-3 py-2 text-xs' : 'px-3 py-1.5 text-xs'),
         isActive
           ? 'bg-[#6366F1] text-white shadow-sm shadow-[#6366F1]/30'
           : 'text-slate-600 dark:text-gray-400 hover:bg-[#F0F4FB] dark:hover:bg-[#232650] hover:text-slate-900 dark:hover:text-gray-200',
-        collapsed && 'justify-center px-2',
-        level === 1 && 'text-xs py-2',
-        level >= 2 && 'text-xs py-1.5'
+        collapsed && 'justify-center'
       )}
     >
       <span className={cn('flex-shrink-0', isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:text-gray-400 dark:group-hover:text-gray-300')}>
