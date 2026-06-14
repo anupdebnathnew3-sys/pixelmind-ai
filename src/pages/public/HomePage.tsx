@@ -187,20 +187,21 @@ export const HomePage: React.FC = () => {
       <style>{`
         @keyframes metaBtnGlow {
           0%, 100% { box-shadow: 0 0 0 0 rgba(165,180,252,0); }
-          50%       { box-shadow: 0 0 0 7px rgba(165,180,252,0.18); }
+          50%       { box-shadow: 0 0 0 9px rgba(165,180,252,0.22); }
         }
         @keyframes metaCursorFloat {
-          0%        { transform: translate(0px, 0px)   scale(1);    }
-          35%       { transform: translate(-3px, -9px) scale(1);    }
-          48%       { transform: translate(-3px, -9px) scale(0.8);  }
-          58%       { transform: translate(-3px, -9px) scale(1);    }
-          100%      { transform: translate(0px, 0px)   scale(1);    }
+          0%, 8%   { transform: translateY(0px)    scale(1);    }
+          40%      { transform: translateY(-76px)  scale(1);    }
+          49%      { transform: translateY(-76px)  scale(0.72); }
+          57%      { transform: translateY(-76px)  scale(1);    }
+          85%      { transform: translateY(0px)    scale(1);    }
+          100%     { transform: translateY(0px)    scale(1);    }
         }
         @keyframes metaClickRing {
-          0%,  44% { transform: translate(-50%,-50%) scale(0);   opacity: 0;   }
-          48%       { transform: translate(-50%,-50%) scale(0.2); opacity: 0.9; }
-          72%       { transform: translate(-50%,-50%) scale(2.8); opacity: 0;   }
-          100%      { transform: translate(-50%,-50%) scale(0);   opacity: 0;   }
+          0%, 43%  { transform: translate(-50%,-50%) scale(0);   opacity: 0;   }
+          49%      { transform: translate(-50%,-50%) scale(0.3); opacity: 1;   }
+          72%      { transform: translate(-50%,-50%) scale(4.2); opacity: 0;   }
+          100%     { transform: translate(-50%,-50%) scale(0);   opacity: 0;   }
         }
       `}</style>
       <PublicNavbar />
@@ -276,32 +277,35 @@ export const HomePage: React.FC = () => {
               <Link
                 to="/tools/metadata"
                 className="flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-white/8 hover:bg-white/15 text-white font-semibold text-base border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5"
-                style={{ animation: 'metaBtnGlow 2.6s ease-in-out infinite' }}
+                style={{ animation: 'metaBtnGlow 3.2s ease-in-out infinite' }}
               >
                 <ImageIcon size={18} className="text-[#A5B4FC]" />
                 Try Metadata Generator
               </Link>
 
-              {/* Animated cursor + click ripple */}
+              {/* Outer div: absolute position below the button, centred */}
+              {/* Inner div: runs the float-up + click animation              */}
               <div
-                className="absolute bottom-0 right-8 pointer-events-none select-none"
-                style={{ animation: 'metaCursorFloat 2.6s ease-in-out infinite' }}
+                className="absolute pointer-events-none select-none"
+                style={{ bottom: '-74px', left: '50%', marginLeft: '-17px' }}
               >
-                {/* Standard arrow cursor SVG */}
-                <svg width="22" height="26" viewBox="0 0 22 26" fill="none">
-                  <path
-                    d="M2 2L2 20L7 15L10.5 22.5L13 21.5L9.5 14L16 14L2 2Z"
-                    fill="white"
-                    stroke="#6366F1"
-                    strokeWidth="1.4"
-                    strokeLinejoin="round"
+                <div style={{ animation: 'metaCursorFloat 3.2s ease-in-out infinite' }}>
+                  {/* Larger arrow cursor SVG */}
+                  <svg width="34" height="40" viewBox="0 0 34 40" fill="none">
+                    <path
+                      d="M3 3L3 29L10 22.5L14 33.5L18 31.5L14 21L22 21L3 3Z"
+                      fill="white"
+                      stroke="#6366F1"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {/* Click ripple — expands from the cursor tip */}
+                  <div
+                    className="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-[#A5B4FC]"
+                    style={{ animation: 'metaClickRing 3.2s ease-in-out infinite' }}
                   />
-                </svg>
-                {/* Click ripple at cursor tip */}
-                <div
-                  className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[#A5B4FC]"
-                  style={{ animation: 'metaClickRing 2.6s ease-in-out infinite' }}
-                />
+                </div>
               </div>
             </div>
           </div>
