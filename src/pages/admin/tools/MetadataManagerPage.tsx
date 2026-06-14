@@ -141,7 +141,7 @@ export const MetadataManagerPage: React.FC = () => {
           />
           <Input
             label="Default Creator / Author Name"
-            placeholder="e.g. PixelMind AI"
+            placeholder="e.g. John Smith (leave empty for no author)"
             value={embedSettings.meta_embed_creator}
             onChange={e => setEmbedSettings(s => ({ ...s, meta_embed_creator: e.target.value }))}
           />

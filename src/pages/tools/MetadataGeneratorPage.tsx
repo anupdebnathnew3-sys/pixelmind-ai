@@ -513,7 +513,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   };
 
   const getEffectiveAuthor = (img: ImageFile): string =>
-    (img.userAuthor !== undefined ? img.userAuthor : globalAuthor) || embedCreator || '';
+    (img.userAuthor !== undefined ? img.userAuthor : globalAuthor) || '';
 
   const getEffectiveCopyright = (img: ImageFile): string =>
     (img.userCopyright !== undefined ? img.userCopyright : globalCopyright) || embedCopyright || '';
