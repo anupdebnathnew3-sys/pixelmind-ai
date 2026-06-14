@@ -225,28 +225,20 @@ export const BrandVoicePage: React.FC<{ guestAllowed?: boolean }> = ({ guestAllo
 
     const selectedTone = TONES.find(t => t.id === tone);
     const template = getTemplate('brand-voice');
-    const prompt = `Create a comprehensive brand voice package for:
+    const prompt = `Brand voice package for:
+Brand: ${brandName} | Industry: ${industry} | Tone: ${selectedTone?.label} (${selectedTone?.desc})
+Personality: ${personality || 'not specified'} | Audience: ${audience || 'not specified'}
 
-Brand Name: ${brandName}
-Industry: ${industry}
-Personality: ${personality || 'Not specified'}
-Target Audience: ${audience || 'Not specified'}
-Tone: ${selectedTone?.label} (${selectedTone?.desc})
+Return ONLY this JSON object — no markdown, no text before or after:
+{"brandVoice":"2 sentences on voice and communication style","tagline":"under 8 words","slogans":["s1","s2","s3","s4"],"marketingHooks":["h1","h2","h3"],"positioningStatement":"For [audience], ${brandName} is the [category] that [benefit] because [reason]."}
 
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "brandVoice": "A 2-3 sentence description of the brand's voice, personality and communication style",
-  "tagline": "The primary brand tagline (short, memorable, under 8 words)",
-  "slogans": ["slogan 1", "slogan 2", "slogan 3", "slogan 4", "slogan 5"],
-  "marketingHooks": ["hook 1", "hook 2", "hook 3", "hook 4"],
-  "positioningStatement": "For [target audience], ${brandName} is the [category] that [key benefit] because [reason to believe]."
-}`;
+All values must match the ${selectedTone?.label} tone. Keep each slogan under 10 words. Hooks must be punchy and scroll-stopping.`;
 
     try {
       const response = await callAI({
         prompt,
-        systemPrompt: template?.systemPrompt ?? 'You are a world-class brand strategist. Return ONLY valid JSON — no markdown, no explanations.',
-        maxTokens: 1200,
+        systemPrompt: template?.systemPrompt ?? 'You are a world-class brand strategist. Return ONLY valid JSON — no markdown, no explanations, no extra text.',
+        maxTokens: 2500,
       });
       const json = extractJSON(response.text);
       const parsed = JSON.parse(json) as {
@@ -264,7 +256,10 @@ Return ONLY valid JSON (no markdown, no explanation):
       deductCredits(1);
       toast.success('Brand voice generated!');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Generation failed';
+      const raw = err instanceof Error ? err.message : 'Generation failed';
+      const msg = raw.toLowerCase().includes('json') || raw.toLowerCase().includes('unterminated')
+        ? 'The AI response was cut off. Try again — it usually works on the second attempt.'
+        : raw;
       setError(msg);
       toast.error('Generation failed');
     }
