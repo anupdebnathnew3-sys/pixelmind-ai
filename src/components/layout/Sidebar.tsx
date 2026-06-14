@@ -4,10 +4,10 @@ import { cn } from '../../utils/cn';
 import { useStore } from '../../store/useStore';
 import { useAdminStore } from '../../store/useAdminStore';
 import {
-  LayoutDashboard, Wrench, Image, FileText, Calendar, Clock,
+  LayoutDashboard, Wrench, FileText, Clock,
   Settings, CreditCard, User, LogOut, ChevronLeft,
   ChevronRight, Zap, MessageSquare, Hash, ImagePlus, ChevronDown,
-  Shield, Bot, BarChart3, Globe, Calculator, DollarSign,
+  Shield, Bot, BarChart3, Globe, DollarSign,
   Lock, Navigation, Palette, Scale, Home, Mail, Users,
   Image as ImageIcon, BellRing, Search, Database,
   PanelTop, Megaphone, Mic2, Type, Video, Sparkles
@@ -25,45 +25,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/dashboard' },
   {
-    id: 'ai-content', label: 'AI Content & Metadata', icon: <Sparkles size={18} />, path: '/tools/ai-content',
+    id: 'tools', label: 'Tools', icon: <Wrench size={18} />, path: '/tools',
     children: [
-      { id: 'metadata',   label: 'AI Metadata Generator', icon: <Image size={16} />,       path: '/tools/metadata',         badge: 'Core' },
-      { id: 'img2prompt', label: 'Image To Prompt',       icon: <ImagePlus size={16} />,   path: '/tools/image-to-prompt' },
-      { id: 'content',    label: 'AI Content Writer',     icon: <FileText size={16} />,    path: '/tools/content-writer' },
-      { id: 'slogan',     label: 'Slogan Generator',      icon: <MessageSquare size={16} />, path: '/tools/slogan-generator' },
-    ]
-  },
-  {
-    id: 'text-tools', label: 'Text & Word Tools', icon: <Hash size={18} />, path: '/tools/text',
-    children: [
-      { id: 'wordcount', label: 'Word Counter', icon: <Hash size={16} />, path: '/tools/word-counter' },
-    ]
-  },
-  {
-    id: 'calc-planning', label: 'Calculators & Planning', icon: <Calculator size={18} />, path: '/tools/calculators',
-    children: [
-      { id: 'age-calc',  label: 'Age Calculator', icon: <Calculator size={16} />, path: '/tools/age-calculator' },
-      { id: 'event-cal', label: 'Event Calendar', icon: <Calendar size={16} />,   path: '/tools/event-calendar' },
-    ]
-  },
-  {
-    id: 'branding', label: 'Color & Branding', icon: <Palette size={18} />, path: '/tools/branding',
-    children: [
-      { id: 'color-palette', label: 'Color Palette Generator', icon: <Palette size={16} />,    path: '/tools/color-palette', badge: 'New' },
-      { id: 'brand-voice',   label: 'Brand Voice & Slogans',   icon: <Mic2 size={16} />,        path: '/tools/brand-voice',   badge: 'New' },
-    ]
-  },
-  {
-    id: 'typography', label: 'Typography & Fonts', icon: <Type size={18} />, path: '/tools/typography',
-    children: [
-      { id: 'font-pairing', label: 'Font Pairing Assistant', icon: <Type size={16} />, path: '/tools/font-pairing', badge: 'New' },
-    ]
-  },
-  {
-    id: 'marketing', label: 'Marketing Tools', icon: <Megaphone size={18} />, path: '/tools/marketing',
-    children: [
-      { id: 'ad-copy',      label: 'Ad Copywriter',         icon: <Megaphone size={16} />, path: '/tools/ad-copywriter', badge: 'New' },
-      { id: 'sales-script', label: 'Reels Script Writer',   icon: <Video size={16} />,     path: '/tools/sales-script',  badge: 'New' },
+      { id: 'tools-tour', label: 'Tour', icon: <Sparkles size={16} />, path: '/tools' },
     ]
   },
   { id: 'history', label: 'History', icon: <Clock size={18} />, path: '/history' },

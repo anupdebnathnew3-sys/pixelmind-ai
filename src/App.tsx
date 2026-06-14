@@ -21,6 +21,7 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { AISettingsPage } from './pages/dashboard/AISettingsPage';
 import { BillingPage } from './pages/dashboard/BillingPage';
+import { ToolsTourPage } from './pages/tools/ToolsTourPage';
 import { MetadataGeneratorPage } from './pages/tools/MetadataGeneratorPage';
 import { ImageToPromptPage } from './pages/tools/ImageToPromptPage';
 import { ContentWriterPage } from './pages/tools/ContentWriterPage';
@@ -175,6 +176,9 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/ai-settings" element={<AISettingsPage guestAllowed />} />
         <Route path="/billing" element={<BillingPage />} />
+
+        {/* Tools tour / hub */}
+        <Route path="/tools" element={<ToolsTourPage guestAllowed />} />
 
         {/* Tools — all allow guest access with 50 free credits */}
         <Route path="/tools/metadata" element={<ToolRoute toolId="metadata" element={<MetadataGeneratorPage guestAllowed />} />} />
