@@ -935,7 +935,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                     <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden min-w-[200px] py-1">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2 pb-1">{doneCount} file{doneCount !== 1 ? 's' : ''} ready</p>
                       {([
-                        { fmt: 'CSV',  desc: 'Spreadsheet-ready', color: '#10B981', bg: '#10B98118', action: canUseEmbedFeatures ? exportCSV : () => { setExportOpen(false); setShowUpgradeModal(true); } },
+                        { fmt: 'CSV',  desc: 'Spreadsheet-ready', color: '#10B981', bg: '#10B98118', action: exportCSV },
                         { fmt: 'XLSX', desc: 'Excel format',       color: '#3B82F6', bg: '#3B82F618', action: () => { toast.success('XLSX coming soon!'); setExportOpen(false); } },
                         { fmt: 'JSON', desc: 'Structured data',    color: '#8B5CF6', bg: '#8B5CF618', action: exportJSON },
                       ] as const).map(({ fmt, desc, color, bg, action }) => (
@@ -1531,7 +1531,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Metadata only (no images)</p>
               <div className="grid grid-cols-2 gap-2.5">
                 {([
-                  { fmt: 'CSV',  label: 'Spreadsheet', color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: canUseEmbedFeatures ? exportCSV : () => { setShowExportModal(false); setShowUpgradeModal(true); } },
+                  { fmt: 'CSV',  label: 'Spreadsheet', color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: exportCSV },
                   { fmt: 'XLSX', label: 'Excel Format', color: '#3B82F6', bg: 'from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10',             border: 'border-blue-200 dark:border-blue-700/40',    action: () => toast.success('XLSX coming soon!') },
                   { fmt: 'JSON', label: 'Structured',   color: '#8B5CF6', bg: 'from-violet-50 to-violet-50 dark:from-violet-900/20 dark:to-violet-900/10',     border: 'border-violet-200 dark:border-violet-700/40', action: exportJSON },
                 ] as const).map(({ fmt, label, color, bg, border, action }) => (

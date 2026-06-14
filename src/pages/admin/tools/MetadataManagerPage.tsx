@@ -191,7 +191,7 @@ export const MetadataManagerPage: React.FC = () => {
         <div className="grid sm:grid-cols-3 gap-3 mb-4">
           {[
             { plan: 'Guest',        access: 'Full Access',    color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', badge: 'border-emerald-200 dark:border-emerald-700/40' },
-            { plan: 'Free',         access: premiumRestricted ? 'Generate Only' : 'Full Access', color: premiumRestricted ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400', bg: premiumRestricted ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20', badge: premiumRestricted ? 'border-amber-200 dark:border-amber-700/40' : 'border-emerald-200 dark:border-emerald-700/40' },
+            { plan: 'Free',         access: premiumRestricted ? 'Generate + CSV Only' : 'Full Access', color: premiumRestricted ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400', bg: premiumRestricted ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20', badge: premiumRestricted ? 'border-amber-200 dark:border-amber-700/40' : 'border-emerald-200 dark:border-emerald-700/40' },
             { plan: 'Pro / Max',    access: 'Full Access',    color: 'text-[#6366F1] dark:text-[#A5B4FC]',   bg: 'bg-[#EEF2FF] dark:bg-[#6366F1]/15',     badge: 'border-[#A5B4FC]/40 dark:border-[#6366F1]/30' },
           ].map(row => (
             <div key={row.plan} className={`p-3 rounded-xl border ${row.bg} ${row.badge}`}>
