@@ -564,7 +564,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     return (cleaned || originalName.replace(/\.[^.]+$/, '')) + ext;
   };
 
-  const buildCSVContent = (rows: ImageFile[], nameMap?: Map<string, string>): string => {
+  const buildCSVContent = (rows: ImageFile[]): string => {
     const headers = ['File Name', 'Title', 'Description', 'Keywords'];
     const dataRows = rows.map(img => {
       return [
@@ -580,7 +580,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   const exportCSV = () => {
     const done = images.filter(i => i.status === 'done');
     if (!done.length) { toast.error('No data to export'); return; }
-    const csv = buildCSVContent(done); // no nameMap → uses sanitized title filenames
+    const csv = buildCSVContent(done);
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'Metadata.csv'; a.click();
@@ -659,7 +659,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
         outputFilename: nameMap.get(img.id)!,
       }));
 
-      const csvContent = '﻿' + buildCSVContent(done, nameMap);
+      const csvContent = '﻿' + buildCSVContent(done);
 
       const zipBlob = await buildZIPPackage(items, csvContent, (d, t) => {
         toast.loading(`Embedding ${d + 1}/${t}: ${nameMap.get(done[d]?.id ?? '') ?? ''}…`, { id: tid });
