@@ -12,13 +12,14 @@ import {
   Upload, Image, Download, RefreshCw, Settings, ChevronDown,
   ChevronUp, Trash2, Copy, X, AlertCircle, Type, AlignLeft, Hash, Zap,
   ZoomIn, Maximize2, Plus, RotateCcw, Sparkles, FileDown, Layers,
-  Star, User, Archive, CheckCircle2
+  Star, User, Archive, CheckCircle2, FileCode2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
 import { useAdminStore } from '../../store/useAdminStore';
 import { triggerDownload, buildZIPPackage } from '../../services/metadataEmbedService';
 import type { ZIPItem } from '../../services/metadataEmbedService';
+import * as XLSX from 'xlsx';
 import { MetadataUpgradeModal } from '../../components/metadata/MetadataUpgradeModal';
 
 const MARKETPLACES = [
@@ -45,6 +46,7 @@ interface MetadataSettings {
   keywordStyle: 'single' | 'double' | 'mixed';
   pngBackground: boolean;
   whiteBackground: boolean;
+  silhouetteBackground: boolean;
   keywordPriority: boolean;
   batchSize: 1 | 2 | 3 | 4 | 5;
   titlePrefix: string;
@@ -192,6 +194,12 @@ function parseMetadataResponse(text: string, settings: MetadataSettings): Parsed
   };
 }
 
+const isEPSFile = (file: File) =>
+  file.name.toLowerCase().endsWith('.eps') ||
+  file.type === 'application/postscript' ||
+  file.type === 'application/eps' ||
+  file.type === 'image/x-eps';
+
 async function generateField(
   img: ImageFile,
   field: 'title' | 'description' | 'keywords' | 'all',
@@ -202,8 +210,16 @@ async function generateField(
   const template = getTemplate('metadata');
   if (!template) throw new Error('Metadata prompt template not found');
 
-  // Compress + resize to ≤ 1024 px before sending — avoids API payload limits
-  const { base64, mimeType } = await imageToBase64ForAI(img.file);
+  // EPS files cannot be sent to vision AI — use filename-based text prompt instead
+  const eps = isEPSFile(img.file);
+  let base64: string | undefined;
+  let mimeType: string | undefined;
+  if (!eps) {
+    // Compress + resize to ≤ 1024 px before sending — avoids API payload limits
+    const r = await imageToBase64ForAI(img.file);
+    base64   = r.base64;
+    mimeType = r.mimeType;
+  }
 
   // Build a field-specific prompt when regenerating a single field
   let fieldInstruction = '';
@@ -231,10 +247,13 @@ async function generateField(
     keywordPriority: settings.keywordPriority,
     pngBackground: settings.pngBackground,
     whiteBackground: settings.whiteBackground,
+    silhouetteBackground: settings.silhouetteBackground,
   });
 
-  // Prepend filename so the AI knows which unique image it is analyzing
-  const imageContext = `Image file: ${img.file.name} (${(img.file.size / 1024).toFixed(0)} KB)\n\n`;
+  // Prepend file context so the AI knows what it is analyzing
+  const imageContext = eps
+    ? `EPS Vector Illustration: "${img.file.name}" (${(img.file.size / 1024).toFixed(0)} KB). This is an EPS vector art file. Generate metadata appropriate for a professional vector stock illustration.\n\n`
+    : `Image file: ${img.file.name} (${(img.file.size / 1024).toFixed(0)} KB)\n\n`;
 
   // Constrain category to predefined list
   const categoryInstruction = settings.forceCategory
@@ -250,8 +269,7 @@ async function generateField(
   const response = await callAI({
     prompt,
     systemPrompt,
-    imageBase64: base64,
-    imageMimeType: mimeType,
+    ...(base64 && mimeType ? { imageBase64: base64, imageMimeType: mimeType } : {}),
     maxTokens: field === 'all' ? 1500 : 800,
   });
 
@@ -285,6 +303,7 @@ const DEFAULT_SETTINGS: MetadataSettings = {
   keywordStyle: 'single',
   pngBackground: false,
   whiteBackground: false,
+  silhouetteBackground: false,
   keywordPriority: true,
   batchSize: 1,
   titlePrefix: '',
@@ -400,7 +419,14 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
-    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'] },
+    accept: {
+      'image/jpeg':            ['.jpg', '.jpeg'],
+      'image/png':             ['.png'],
+      'image/webp':            ['.webp'],
+      'application/postscript': ['.eps'],
+      'application/eps':       ['.eps'],
+      'image/x-eps':           ['.eps'],
+    },
     maxFiles: 150,
   });
 
@@ -539,17 +565,13 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
   };
 
   const buildCSVContent = (rows: ImageFile[], nameMap?: Map<string, string>): string => {
-    const headers = ['File Name', 'Title', 'Description', 'Keywords', 'Author Name', 'Copyright', 'Rating'];
+    const headers = ['File Name', 'Title', 'Description', 'Keywords'];
     const dataRows = rows.map(img => {
-      const outName = nameMap?.get(img.id) ?? sanitizeFilename(applyAffixes(img.title || ''), img.file.name);
       return [
-        `"${outName.replace(/"/g, '""')}"`,
+        `"${img.file.name.replace(/"/g, '""')}"`,
         `"${applyAffixes(img.title || '').replace(/"/g, '""')}"`,
         `"${(img.description || '').replace(/"/g, '""')}"`,
         `"${(img.keywords || []).join(', ')}"`,
-        `"${getEffectiveAuthor(img).replace(/"/g, '""')}"`,
-        `"${getEffectiveCopyright(img).replace(/"/g, '""')}"`,
-        `"${(img.rating ?? 5)}/5"`,
       ];
     });
     return [headers.join(','), ...dataRows.map(r => r.join(','))].join('\n');
@@ -565,14 +587,45 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
     toast.success('CSV exported!');
   };
 
-  const exportJSON = () => {
+  const exportTXT = () => {
     const done = images.filter(i => i.status === 'done');
     if (!done.length) { toast.error('No data to export'); return; }
-    const data = done.map(img => ({ fileName: img.file.name, title: applyAffixes(img.title || ''), description: img.description, keywords: img.keywords, category: img.category, commercialIntent: img.commercialIntent, metadataScore: img.metadataScore }));
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const lines: string[] = [];
+    done.forEach((img, idx) => {
+      const fileName = sanitizeFilename(applyAffixes(img.title || ''), img.file.name);
+      lines.push(`=== Image ${idx + 1} ===`);
+      lines.push(`File Name   : ${fileName}`);
+      lines.push(`Title       : ${applyAffixes(img.title || '')}`);
+      lines.push(`Description : ${img.description || ''}`);
+      lines.push(`Keywords    : ${(img.keywords || []).join(', ')}`);
+      lines.push(`Author      : ${getEffectiveAuthor(img)}`);
+      lines.push(`Copyright   : ${getEffectiveCopyright(img)}`);
+      lines.push(`Rating      : ${img.rating ?? 5}/5`);
+      lines.push('');
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8;' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'metadata-export.json'; a.click();
-    toast.success('JSON exported!');
+    a.href = URL.createObjectURL(blob); a.download = 'Metadata.txt'; a.click();
+    toast.success('TXT exported!');
+  };
+
+  const exportXLSX = () => {
+    const done = images.filter(i => i.status === 'done');
+    if (!done.length) { toast.error('No data to export'); return; }
+    const rows = done.map(img => ({
+      'File Name':   sanitizeFilename(applyAffixes(img.title || ''), img.file.name),
+      'Title':       applyAffixes(img.title || ''),
+      'Description': img.description || '',
+      'Keywords':    (img.keywords || []).join(', '),
+      'Author Name': getEffectiveAuthor(img),
+      'Copyright':   getEffectiveCopyright(img),
+      'Rating':      `${img.rating ?? 5}/5`,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Metadata');
+    XLSX.writeFile(wb, 'Metadata.xlsx');
+    toast.success('Excel file exported!');
   };
 
 
@@ -748,10 +801,13 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                   </div>
                   <Toggle checked={settings.pngBackground} onChange={v => setSettings(s => ({ ...s, pngBackground: v }))} label="Transparent Background" />
                   <Toggle checked={settings.whiteBackground} onChange={v => setSettings(s => ({ ...s, whiteBackground: v }))} label="White Background" />
-                  {(settings.pngBackground || settings.whiteBackground) && (
+                  <Toggle checked={settings.silhouetteBackground} onChange={v => setSettings(s => ({ ...s, silhouetteBackground: v }))} label="Silhouette Background" />
+                  {(settings.pngBackground || settings.whiteBackground || settings.silhouetteBackground) && (
                     <p className="text-[10px] text-gray-400 bg-[#EEF2FF] dark:bg-[#6366F1]/10 p-2 rounded-lg">
                       {settings.pngBackground
                         ? 'AI optimized for transparent PNG images'
+                        : settings.silhouetteBackground
+                        ? 'AI optimized for silhouette background images'
                         : 'AI optimized for white background images'}
                     </p>
                   )}
@@ -935,10 +991,10 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                     <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#191c40] border border-gray-200 dark:border-[#232650] rounded-2xl shadow-2xl overflow-hidden min-w-[200px] py-1">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2 pb-1">{doneCount} file{doneCount !== 1 ? 's' : ''} ready</p>
                       {([
-                        { fmt: 'CSV',  desc: 'Spreadsheet-ready', color: '#10B981', bg: '#10B98118', action: exportCSV },
-                        { fmt: 'XLSX', desc: 'Excel format',       color: '#3B82F6', bg: '#3B82F618', action: () => { toast.success('XLSX coming soon!'); setExportOpen(false); } },
-                        { fmt: 'JSON', desc: 'Structured data',    color: '#8B5CF6', bg: '#8B5CF618', action: exportJSON },
-                      ] as const).map(({ fmt, desc, color, bg, action }) => (
+                        { fmt: 'CSV',   desc: 'Spreadsheet-ready', color: '#10B981', bg: '#10B98118', action: exportCSV  },
+                        { fmt: 'TXT',   desc: 'Plain text file',   color: '#F59E0B', bg: '#F59E0B18', action: exportTXT  },
+                        { fmt: 'Excel', desc: 'Excel workbook',    color: '#3B82F6', bg: '#3B82F618', action: exportXLSX },
+                      ] as { fmt: string; desc: string; color: string; bg: string; action: () => void }[]).map(({ fmt, desc, color, bg, action }) => (
                         <button key={fmt} onClick={() => { action(); setExportOpen(false); }}
                           className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#0d1030]/60 transition-colors group">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
@@ -1176,23 +1232,40 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                           ══════════════════════════════════════ */}
                       <div className="relative md:w-[42%] flex-shrink-0 bg-gray-100 dark:bg-[#0d1030] min-h-[280px] md:min-h-[340px] group">
 
-                        {/* Main image — object-contain so full image is visible */}
-                        <img
-                          src={img.preview}
-                          alt={img.file.name}
-                          className="absolute inset-0 w-full h-full object-contain p-3"
-                        />
-
-                        {/* Hover zoom overlay */}
-                        <div
-                          className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center cursor-zoom-in"
-                          onClick={() => setLightboxSrc(img.preview)}
-                        >
-                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/95 dark:bg-[#191c40]/95 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-lg border border-white/20">
-                            <ZoomIn size={16} className="text-[#6366F1]" />
-                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Click to expand</span>
+                        {isEPSFile(img.file) ? (
+                          /* EPS placeholder — browsers can't render PostScript */
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
+                            <div className="w-20 h-20 rounded-2xl bg-[#6366F1]/10 border-2 border-[#6366F1]/20 flex items-center justify-center">
+                              <FileCode2 size={36} className="text-[#6366F1] opacity-70" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-0.5">EPS Vector File</p>
+                              <p className="text-[10px] text-gray-400 truncate max-w-[160px]">{img.file.name}</p>
+                              <span className="mt-1.5 inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#6366F1]/10 text-[#6366F1]">
+                                {(img.file.size / 1024).toFixed(0)} KB · EPS
+                              </span>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <>
+                            {/* Main image — object-contain so full image is visible */}
+                            <img
+                              src={img.preview}
+                              alt={img.file.name}
+                              className="absolute inset-0 w-full h-full object-contain p-3"
+                            />
+                            {/* Hover zoom overlay */}
+                            <div
+                              className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center cursor-zoom-in"
+                              onClick={() => setLightboxSrc(img.preview)}
+                            >
+                              <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/95 dark:bg-[#191c40]/95 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-lg border border-white/20">
+                                <ZoomIn size={16} className="text-[#6366F1]" />
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Click to expand</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
 
                         {/* Status badge — top left */}
                         <div className="absolute top-3 left-3">
@@ -1349,6 +1422,27 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                                   )}
                                 </div>
                               )}
+                              {(() => {
+                                const SUFFIX = ' Silhouette Background';
+                                const hasSuffix = (img.title || '').endsWith(SUFFIX);
+                                return (
+                                  <button
+                                    onClick={() => setImages(prev => prev.map(i => i.id === img.id ? {
+                                      ...i,
+                                      title: hasSuffix
+                                        ? (i.title || '').slice(0, -SUFFIX.length)
+                                        : (i.title || '') + SUFFIX,
+                                    } : i))}
+                                    className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border transition-colors ${
+                                      hasSuffix
+                                        ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/40'
+                                        : 'text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300 dark:hover:bg-amber-900/20 dark:hover:text-amber-400'
+                                    }`}
+                                  >
+                                    Silhouette Background
+                                  </button>
+                                );
+                              })()}
                               {img.title && (
                                 <button onClick={() => { navigator.clipboard.writeText(applyAffixes(img.title || '')); toast.success('Title copied!'); }}
                                   className="text-[10px] text-gray-400 hover:text-[#6366F1] flex items-center gap-1 transition-colors font-medium">
@@ -1497,7 +1591,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                               <span className="text-gray-300 dark:text-gray-600">·</span>
                               <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-semibold">
                                 <CheckCircle2 size={10} />
-                                Ready — XMP · IPTC · EXIF
+                                Ready to Download
                               </span>
                             </div>
                           </div>
@@ -1568,7 +1662,7 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
                   <div className="text-left flex-1">
                     <p className="text-base font-bold text-gray-900 dark:text-white">Embed All &amp; Download ZIP</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {doneCount} image{doneCount !== 1 ? 's' : ''} (title-renamed) + Metadata.csv · XMP · IPTC · EXIF
+                      {doneCount} image{doneCount !== 1 ? 's' : ''} with metadata embedded + Metadata.csv
                     </p>
                   </div>
                   <FileDown size={16} className="opacity-40 group-hover:opacity-100 transition-opacity flex-shrink-0 text-[#6366F1]" />
@@ -1577,12 +1671,12 @@ export const MetadataGeneratorPage: React.FC<MetadataGeneratorPageProps> = ({ gu
 
               {/* Metadata-only exports */}
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Metadata only (no images)</p>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-3 gap-2.5">
                 {([
-                  { fmt: 'CSV',  label: 'Spreadsheet', color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: exportCSV },
-                  { fmt: 'XLSX', label: 'Excel Format', color: '#3B82F6', bg: 'from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10',             border: 'border-blue-200 dark:border-blue-700/40',    action: () => toast.success('XLSX coming soon!') },
-                  { fmt: 'JSON', label: 'Structured',   color: '#8B5CF6', bg: 'from-violet-50 to-violet-50 dark:from-violet-900/20 dark:to-violet-900/10',     border: 'border-violet-200 dark:border-violet-700/40', action: exportJSON },
-                ] as const).map(({ fmt, label, color, bg, border, action }) => (
+                  { fmt: 'CSV',   label: 'Spreadsheet', color: '#10B981', bg: 'from-emerald-50 to-emerald-50 dark:from-emerald-900/20 dark:to-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-700/40', action: exportCSV  },
+                  { fmt: 'TXT',   label: 'Plain Text',  color: '#F59E0B', bg: 'from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/10',         border: 'border-amber-200 dark:border-amber-700/40',   action: exportTXT  },
+                  { fmt: 'Excel', label: 'Excel File',  color: '#3B82F6', bg: 'from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/10',             border: 'border-blue-200 dark:border-blue-700/40',    action: exportXLSX },
+                ] as { fmt: string; label: string; color: string; bg: string; border: string; action: () => void }[]).map(({ fmt, label, color, bg, border, action }) => (
                   <button
                     key={fmt}
                     onClick={() => { action(); setShowExportModal(false); }}

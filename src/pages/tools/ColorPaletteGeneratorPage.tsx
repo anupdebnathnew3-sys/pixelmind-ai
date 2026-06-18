@@ -6,7 +6,7 @@ import { Input } from '../../components/ui/Input';
 import { useStore } from '../../store/useStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { callAI, extractJSON } from '../../services/aiService';
-import { Palette, Copy, RefreshCw, Download, AlertCircle, Sun, Moon, Zap } from 'lucide-react';
+import { Palette, Copy, RefreshCw, Download, AlertCircle, Sun, Moon, Zap, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { InlineApiKeySetup } from '../../components/ui/InlineApiKeySetup';
@@ -91,6 +91,7 @@ export const ColorPaletteGeneratorPage: React.FC<{ guestAllowed?: boolean }> = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [darkPreview, setDarkPreview] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(true);
 
   const generate = async () => {
     if (!concept.trim()) { setError('Please describe your brand concept'); return; }
@@ -168,153 +169,209 @@ Rules: Valid 6-digit hex only. Sufficient text/background contrast. Each palette
 
   return (
     <DashboardLayout guestAllowed={guestAllowed}>
-      <div className="max-w-5xl mx-auto space-y-5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Palette size={24} className="text-[#EC4899]" />
-              AI Color Palette Generator
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Describe your brand concept and get 3 professional color palettes</p>
-          </div>
-          <button
-            onClick={() => setDarkPreview(v => !v)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:border-[#6366F1] transition-colors"
-          >
-            {darkPreview ? <Moon size={14} /> : <Sun size={14} />}
-            {darkPreview ? 'Dark Preview' : 'Light Preview'}
-          </button>
-        </div>
+      <div className="flex flex-col lg:flex-row gap-6 min-h-full">
 
-        {/* Input Section */}
-        <InlineApiKeySetup />
+        {/* ── Left Sidebar ── */}
+        <div className="lg:w-72 flex-shrink-0 space-y-4">
 
-        <Card>
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Brand Concept</h3>
-          <div className="space-y-4">
-            <Input
-              label="Describe your brand concept *"
-              placeholder="e.g., Vintage Cyberpunk, Luxury Watch Brand, Organic Coffee Shop"
-              value={concept}
-              onChange={e => { setConcept(e.target.value); setError(''); }}
-            />
-            {/* Example chips */}
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Quick examples:</p>
-              <div className="flex flex-wrap gap-2">
-                {EXAMPLE_CONCEPTS.map(ex => (
-                  <button
-                    key={ex}
-                    onClick={() => setConcept(ex)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                      concept === ex
-                        ? 'bg-[#EC4899] border-[#EC4899] text-white'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-[#EC4899] hover:text-[#EC4899]'
-                    }`}
-                  >
-                    {ex}
-                  </button>
-                ))}
+          {/* Gradient header card */}
+          <div className="rounded-2xl bg-gradient-to-br from-[#EC4899] to-[#F43F5E] p-4 text-white shadow-lg shadow-[#EC4899]/25">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Palette size={20} className="text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-sm leading-tight">Palette Settings</p>
+                <p className="text-white/70 text-xs mt-0.5">Configure your palette</p>
               </div>
             </div>
+          </div>
 
-            {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+          {/* API Key Setup */}
+          <InlineApiKeySetup />
+
+          {/* Collapsible Settings Card */}
+          <Card>
+            <button
+              onClick={() => setSettingsOpen(v => !v)}
+              className="w-full flex items-center justify-between gap-2 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Settings size={16} className="text-[#EC4899]" />
+                <span className="font-semibold text-gray-900 dark:text-white text-sm">Settings</span>
+              </div>
+              {settingsOpen
+                ? <ChevronUp size={16} className="text-gray-400" />
+                : <ChevronDown size={16} className="text-gray-400" />
+              }
+            </button>
+
+            {settingsOpen && (
+              <div className="mt-4 space-y-4">
+                {/* Concept input */}
+                <Input
+                  label="Brand Concept *"
+                  placeholder="e.g., Vintage Cyberpunk, Luxury Watch Brand"
+                  value={concept}
+                  onChange={e => { setConcept(e.target.value); setError(''); }}
+                />
+
+                {/* Example chips */}
                 <div>
-                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-                  {error.includes('No API') && (
-                    <Link to="/ai-settings" className="text-xs text-[#6366F1] underline mt-1 block">Configure API Keys →</Link>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <Button fullWidth size="lg" loading={loading} onClick={generate} icon={<Zap size={18} />}>
-              {loading ? 'Generating Palettes...' : 'Generate 3 Palettes'}
-            </Button>
-          </div>
-        </Card>
-
-        {/* Loading skeletons */}
-        {loading && (
-          <div className="grid md:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-              <Card key={i}>
-                <div className="animate-pulse space-y-3">
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
-                  <div className="grid grid-cols-5 gap-2">
-                    {[1,2,3,4,5].map(j => <div key={j} className="aspect-square rounded-xl bg-gray-200 dark:bg-gray-700" />)}
-                  </div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-                  <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Results */}
-        {!loading && palettes.length > 0 && (
-          <>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Generated Palettes for: <span className="text-[#EC4899]">"{concept}"</span></p>
-              <Button size="sm" variant="ghost" icon={<RefreshCw size={14} />} onClick={generate} loading={loading}>Regenerate</Button>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              {palettes.map((palette, idx) => (
-                <Card key={idx}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="font-bold text-gray-900 dark:text-white text-sm">{palette.name}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">{palette.mood}</p>
-                    </div>
-                    <span className="text-xs font-bold text-[#EC4899] bg-[#EC4899]/10 px-2 py-0.5 rounded-full">#{idx + 1}</span>
-                  </div>
-
-                  {/* Color Swatches */}
-                  <div className="grid grid-cols-5 gap-2 mb-4">
-                    {COLOR_LABELS.map(({ key, label }) => (
-                      <ColorSwatch key={key} hex={palette.colors[key]} label={label} />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Quick examples:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {EXAMPLE_CONCEPTS.map(ex => (
+                      <button
+                        key={ex}
+                        onClick={() => setConcept(ex)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                          concept === ex
+                            ? 'bg-[#EC4899] border-[#EC4899] text-white'
+                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-[#EC4899] hover:text-[#EC4899]'
+                        }`}
+                      >
+                        {ex}
+                      </button>
                     ))}
                   </div>
+                </div>
 
-                  {/* Brand Preview */}
-                  <div className="mb-4">
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Brand Preview</p>
-                    <PalettePreview palette={palette} darkPreview={darkPreview} />
+                {/* Dark/Light preview toggle */}
+                <button
+                  onClick={() => setDarkPreview(v => !v)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:border-[#EC4899] transition-colors"
+                >
+                  {darkPreview ? <Moon size={14} /> : <Sun size={14} />}
+                  {darkPreview ? 'Dark Preview' : 'Light Preview'}
+                </button>
+
+                {/* Error display */}
+                {error && (
+                  <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                    <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                      {error.includes('No API') && (
+                        <Link to="/ai-settings" className="text-xs text-[#6366F1] underline mt-1 block">Configure API Keys →</Link>
+                      )}
+                    </div>
                   </div>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => copyAllHex(palette)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-[#EC4899] hover:text-[#EC4899] transition-colors"
-                    >
-                      <Copy size={12} /> Copy HEX
-                    </button>
-                    <button
-                      onClick={() => downloadPalette(palette)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#EC4899] text-white text-xs font-medium hover:bg-[#DB2777] transition-colors"
-                    >
-                      <Download size={12} /> Download CSS
-                    </button>
+        {/* ── Right Main Content ── */}
+        <div className="flex-1 space-y-4 min-w-0">
+
+          {/* Header bar */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#EC4899] to-[#F43F5E] shadow-md flex items-center justify-center flex-shrink-0">
+                <Palette size={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">AI Color Palette Generator</h1>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EC4899]/15 text-[#EC4899] border border-[#EC4899]/30">
+                    3 Palettes
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" loading={loading} onClick={generate} icon={<Zap size={15} />}>
+                {loading ? 'Generating...' : 'Generate 3 Palettes'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Empty state */}
+          {!loading && palettes.length === 0 && (
+            <div className="text-center py-20 text-gray-400 dark:text-gray-600">
+              <div className="w-20 h-20 bg-[#EC4899]/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <Palette size={36} className="text-[#EC4899]/50" />
+              </div>
+              <p className="font-medium text-gray-500 dark:text-gray-400">Your color palettes will appear here</p>
+              <p className="text-sm mt-1">Describe your brand concept in the sidebar and click Generate</p>
+            </div>
+          )}
+
+          {/* Loading skeletons */}
+          {loading && (
+            <div className="grid md:grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => (
+                <Card key={i}>
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                    <div className="grid grid-cols-5 gap-2">
+                      {[1,2,3,4,5].map(j => <div key={j} className="aspect-square rounded-xl bg-gray-200 dark:bg-gray-700" />)}
+                    </div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                    <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-xl" />
                   </div>
                 </Card>
               ))}
             </div>
-          </>
-        )}
+          )}
 
-        {/* Empty state */}
-        {!loading && palettes.length === 0 && (
-          <div className="text-center py-16 text-gray-400">
-            <Palette size={48} className="mx-auto mb-3 opacity-30" />
-            <p className="font-medium">Your color palettes will appear here</p>
-            <p className="text-sm mt-1">Describe your brand concept above and click Generate</p>
-          </div>
-        )}
+          {/* Results */}
+          {!loading && palettes.length > 0 && (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Generated Palettes for: <span className="text-[#EC4899]">"{concept}"</span>
+                </p>
+                <Button size="sm" variant="ghost" icon={<RefreshCw size={14} />} onClick={generate} loading={loading}>
+                  Regenerate
+                </Button>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                {palettes.map((palette, idx) => (
+                  <Card key={idx}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm">{palette.name}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">{palette.mood}</p>
+                      </div>
+                      <span className="text-xs font-bold text-[#EC4899] bg-[#EC4899]/10 px-2 py-0.5 rounded-full">#{idx + 1}</span>
+                    </div>
+
+                    {/* Color Swatches */}
+                    <div className="grid grid-cols-5 gap-2 mb-4">
+                      {COLOR_LABELS.map(({ key, label }) => (
+                        <ColorSwatch key={key} hex={palette.colors[key]} label={label} />
+                      ))}
+                    </div>
+
+                    {/* Brand Preview */}
+                    <div className="mb-4">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Brand Preview</p>
+                      <PalettePreview palette={palette} darkPreview={darkPreview} />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => copyAllHex(palette)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-[#EC4899] hover:text-[#EC4899] transition-colors"
+                      >
+                        <Copy size={12} /> Copy HEX
+                      </button>
+                      <button
+                        onClick={() => downloadPalette(palette)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#EC4899] text-white text-xs font-medium hover:bg-[#DB2777] transition-colors"
+                      >
+                        <Download size={12} /> Download CSS
+                      </button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -412,6 +412,32 @@ async function embedInWebP(
   return concat(ENC.encode('RIFF'), u32LE(riffData.length), riffData).buffer as ArrayBuffer;
 }
 
+// ─── EPS embedding (XMP in PostScript DSC comment wrapper) ───────────────────
+// Inserts an XMP packet after the first %!PS line, stripping any pre-existing one.
+
+function embedInEPS(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
+  const DEC  = new TextDecoder('utf-8', { fatal: false });
+  let text   = DEC.decode(buf);
+
+  // Strip existing XMP annotation
+  text = text.replace(/%ADO_ContainsXMP:[^\n]*\n?/g, '');
+  text = text.replace(/%%BeginXMP[\s\S]*?%%EndXMP\n?/g, '');
+
+  const xmpBlock =
+    '%ADO_ContainsXMP: MainFirst\n' +
+    '%%BeginXMP\n' +
+    buildXMPXML(m) + '\n' +
+    '%%EndXMP\n';
+
+  // Insert immediately after the first line (%!PS-Adobe-... header)
+  const firstLF = text.indexOf('\n');
+  const result  = firstLF === -1
+    ? xmpBlock + text
+    : text.slice(0, firstLF + 1) + xmpBlock + text.slice(firstLF + 1);
+
+  return ENC.encode(result).buffer as ArrayBuffer;
+}
+
 // ─── Image dimensions (async, browser Image API) ──────────────────────────────
 
 function getImageDimensions(file: File): Promise<{ w: number; h: number }> {
@@ -447,6 +473,8 @@ export async function embedMetadata(
       result = embedInPNG(buffer, meta);
     } else if (mime.includes('webp') || ext === 'webp') {
       result = await embedInWebP(buffer, meta, dims);
+    } else if (ext === 'eps' || mime.includes('postscript') || mime === 'application/eps' || mime === 'image/x-eps') {
+      result = embedInEPS(buffer, meta);
     } else {
       throw new Error(`Unsupported format: ${file.type || ext}`);
     }

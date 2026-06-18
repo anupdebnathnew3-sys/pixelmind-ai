@@ -69,11 +69,13 @@ import { WordCounterManagerPage } from './pages/admin/tools/WordCounterManagerPa
 import { ColorPaletteGeneratorPage } from './pages/tools/ColorPaletteGeneratorPage';
 import { BrandVoicePage } from './pages/tools/BrandVoicePage';
 import { FontPairingPage } from './pages/tools/FontPairingPage';
+import { FontDesignResourcesPage } from './pages/tools/FontDesignResourcesPage';
 import { AdCopywriterPage } from './pages/tools/AdCopywriterPage';
 import { SalesScriptPage } from './pages/tools/SalesScriptPage';
 import { ColorPaletteManagerPage } from './pages/admin/tools/ColorPaletteManagerPage';
 import { BrandVoiceManagerPage } from './pages/admin/tools/BrandVoiceManagerPage';
 import { FontPairingManagerPage } from './pages/admin/tools/FontPairingManagerPage';
+import { FontDesignResourcesManagerPage } from './pages/admin/tools/FontDesignResourcesManagerPage';
 import { AdCopyManagerPage } from './pages/admin/tools/AdCopyManagerPage';
 import { SalesScriptManagerPage } from './pages/admin/tools/SalesScriptManagerPage';
 import { ThemeProvider } from './components/providers/ThemeProvider';
@@ -191,6 +193,8 @@ export default function App() {
         <Route path="/tools/color-palette" element={<ToolRoute toolId="color-palette" element={<ColorPaletteGeneratorPage guestAllowed />} />} />
         <Route path="/tools/brand-voice" element={<ToolRoute toolId="brand-voice" element={<BrandVoicePage guestAllowed />} />} />
         <Route path="/tools/font-pairing" element={<ToolRoute toolId="font-pairing" element={<FontPairingPage guestAllowed />} />} />
+        <Route path="/tools/font-design-resources" element={<ToolRoute toolId="font-design-resources" element={<FontDesignResourcesPage guestAllowed />} />} />
+        <Route path="/tools/font-design-resources/:projectType" element={<ToolRoute toolId="font-design-resources" element={<FontDesignResourcesPage guestAllowed />} />} />
         <Route path="/tools/ad-copywriter" element={<ToolRoute toolId="ad-copywriter" element={<AdCopywriterPage guestAllowed />} />} />
         <Route path="/tools/sales-script" element={<ToolRoute toolId="sales-script" element={<SalesScriptPage guestAllowed />} />} />
 
@@ -239,6 +243,7 @@ export default function App() {
         <Route path="/admin/tool/color-palette" element={<ColorPaletteManagerPage />} />
         <Route path="/admin/tool/brand-voice" element={<BrandVoiceManagerPage />} />
         <Route path="/admin/tool/font-pairing" element={<FontPairingManagerPage />} />
+        <Route path="/admin/tool/font-design-resources" element={<FontDesignResourcesManagerPage />} />
         <Route path="/admin/tool/ad-copy" element={<AdCopyManagerPage />} />
         <Route path="/admin/tool/sales-script" element={<SalesScriptManagerPage />} />
 

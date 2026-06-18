@@ -424,6 +424,7 @@ export function buildMetadataPrompt(
     keywordPriority: boolean;
     pngBackground: boolean;
     whiteBackground: boolean;
+    silhouetteBackground: boolean;
   }
 ): string {
   const styleRules: Record<string, string> = {
@@ -439,7 +440,8 @@ export function buildMetadataPrompt(
     .replace(/\{\{KEYWORD_COUNT\}\}/g, String(opts.keywordCount))
     .replace(/\{\{KEYWORD_STYLE\}\}/g, styleRules[opts.keywordStyle])
     .replace(/\{\{PNG_MODE\}\}/g, opts.pngBackground ? 'ON' : 'OFF')
-    .replace(/\{\{WHITE_BACKGROUND_MODE\}\}/g, opts.whiteBackground ? 'ON' : 'OFF');
+    .replace(/\{\{WHITE_BACKGROUND_MODE\}\}/g, opts.whiteBackground ? 'ON' : 'OFF')
+    .replace(/\{\{SILHOUETTE_BACKGROUND_MODE\}\}/g, opts.silhouetteBackground ? 'ON' : 'OFF');
 }
 
 const PLATFORM_INSTRUCTIONS: Record<string, string> = {

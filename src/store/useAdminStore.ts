@@ -228,7 +228,8 @@ const DEFAULT_TOOLS: ToolConfig[] = [
   { id: 'color-palette',    name: 'AI Color Palette Generator',  enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
   { id: 'brand-voice',      name: 'Brand Voice & Slogan Matcher',enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
   // Typography
-  { id: 'font-pairing',     name: 'AI Font Pairing Assistant',   enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'font-pairing',            name: 'AI Font Pairing Assistant',    enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
+  { id: 'font-design-resources',   name: 'Font & Design Resources',      enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
   // Marketing
   { id: 'ad-copywriter',    name: 'Social Media Ad Copywriter',  enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },
   { id: 'sales-script',     name: 'Shorts & Reels Script Writer',enabled: true, fontFamily: 'Noto Sans', fontSize: '14px' },

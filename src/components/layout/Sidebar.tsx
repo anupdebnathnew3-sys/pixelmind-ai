@@ -10,7 +10,7 @@ import {
   Shield, Bot, BarChart3, Globe, DollarSign,
   Lock, Navigation, Palette, Scale, Home, Mail, Users,
   Image as ImageIcon, BellRing, Search, Database,
-  PanelTop, Megaphone, Mic2, Type, Video, Sparkles
+  PanelTop, Megaphone, Mic2, Type, Video, Sparkles,
 } from 'lucide-react';
 
 interface NavItem {
@@ -107,7 +107,8 @@ const adminItems: NavItem[] = [
       { id: 'tool-word',       label: 'Word Counter',       icon: <Hash size={16} />,       path: '/admin/tool/word-counter' },
       { id: 'tool-color',      label: 'Color Palette',      icon: <Palette size={16} />,    path: '/admin/tool/color-palette' },
       { id: 'tool-brand',      label: 'Brand Voice',        icon: <Mic2 size={16} />,       path: '/admin/tool/brand-voice' },
-      { id: 'tool-font',       label: 'Font Pairing',       icon: <Type size={16} />,       path: '/admin/tool/font-pairing' },
+      { id: 'tool-font',          label: 'Font Pairing',          icon: <Type size={16} />,     path: '/admin/tool/font-pairing' },
+      { id: 'tool-font-design',   label: 'Font & Design Resources', icon: <Sparkles size={16} />, path: '/admin/tool/font-design-resources' },
       { id: 'tool-adcopy',     label: 'Ad Copywriter',      icon: <Megaphone size={16} />,  path: '/admin/tool/ad-copy' },
       { id: 'tool-script',     label: 'Sales Script',       icon: <Video size={16} />,      path: '/admin/tool/sales-script' },
     ],
