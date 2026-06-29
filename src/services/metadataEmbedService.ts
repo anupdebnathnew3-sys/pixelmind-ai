@@ -208,7 +208,6 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
 
   const XMP_NS  = ENC.encode('http://ns.adobe.com/xap/1.0/\0');
   const PS_HDR  = ENC.encode('Photoshop 3.0\0');
-  const EXIF_ID = new Uint8Array([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]); // "Exif\0\0"
 
   const kept: Uint8Array[] = [];
   let insertAfter = 0; // index in `kept` to splice XMP+IPTC after
@@ -235,8 +234,9 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
 
     let skip = false;
     if (marker === 0xE1 && bytesMatch(bytes, pos + 4, XMP_NS))  skip = true; // existing XMP
-    if (marker === 0xE1 && bytesMatch(bytes, pos + 4, EXIF_ID)) skip = true; // existing EXIF
     if (marker === 0xED && bytesMatch(bytes, pos + 4, PS_HDR))  skip = true; // existing IPTC
+    // Original EXIF (APP1 Exif) is intentionally preserved — it contains DPI, XResolution,
+    // YResolution, ResolutionUnit and camera data that must not be stripped.
 
     if (!skip) {
       kept.push(bytes.slice(pos, segEnd));
@@ -250,15 +250,14 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
   // Build insertion point (after APP0 if present, else after SOI)
   const insertion = insertAfter === 0 ? 1 : insertAfter;
   const xmpSeg  = buildJPEGXMP(m);
-  const exifSeg = buildJPEGEXIF(m);
   const iptcSeg = buildJPEGIPTC(m);
 
   const before = kept.slice(0, insertion);
   const after  = kept.slice(insertion);
 
-  // Inject order: XMP (APP1) → EXIF (APP1) → IPTC (APP13), all after SOI/APP0
-  const newSegs = exifSeg.length ? [xmpSeg, exifSeg, iptcSeg] : [xmpSeg, iptcSeg];
-  return concat(...before, ...newSegs, ...after).buffer as ArrayBuffer;
+  // Inject XMP (APP1) + IPTC (APP13) after SOI/APP0. Original EXIF is kept in-place
+  // so DPI, resolution, and camera metadata are never lost.
+  return concat(...before, xmpSeg, iptcSeg, ...after).buffer as ArrayBuffer;
 }
 
 // ─── PNG CRC32 ────────────────────────────────────────────────────────────────
