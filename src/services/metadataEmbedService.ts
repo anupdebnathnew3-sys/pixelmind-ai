@@ -35,9 +35,10 @@ function buildXMPXML(m: EmbedMetadata, dpi?: { x: number; y: number }): string {
     : '';
   // Include tiff namespace DPI fields so apps that read XMP first (e.g. Photoshop) get correct resolution
   const tiffNs = dpi ? '\n    xmlns:tiff="http://ns.adobe.com/tiff/1.0/"' : '';
+  // XMP type for XResolution/YResolution is "Rational" — must be serialized as "n/d"
   const resolution = dpi
-    ? `\n   <tiff:XResolution>${dpi.x}</tiff:XResolution>` +
-      `\n   <tiff:YResolution>${dpi.y}</tiff:YResolution>` +
+    ? `\n   <tiff:XResolution>${dpi.x}/1</tiff:XResolution>` +
+      `\n   <tiff:YResolution>${dpi.y}/1</tiff:YResolution>` +
       `\n   <tiff:ResolutionUnit>2</tiff:ResolutionUnit>`
     : '';
   return `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -257,7 +258,8 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
 
   // Extract DPI from the original file before modifying anything.
   // This covers both JFIF APP0 (density_unit 1/2) and EXIF IFD0 (XResolution/YResolution).
-  const dpi = readJPEGDPI(bytes);
+  let dpi: { x: number; y: number } | null = null;
+  try { dpi = readJPEGDPI(bytes); } catch { dpi = null; }
 
   const XMP_NS = ENC.encode('http://ns.adobe.com/xap/1.0/\0');
   const PS_HDR = ENC.encode('Photoshop 3.0\0');
