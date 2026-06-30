@@ -22,7 +22,7 @@ function escX(s: string): string {
           .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
-function buildXMPXML(m: EmbedMetadata): string {
+function buildXMPXML(m: EmbedMetadata, dpi?: { x: number; y: number }): string {
   const kws = m.keywords.map(k => `      <rdf:li>${escX(k)}</rdf:li>`).join('\n');
   const rights = m.copyright
     ? `\n   <dc:rights><rdf:Alt><rdf:li xml:lang="x-default">${escX(m.copyright)}</rdf:li></rdf:Alt></dc:rights>`
@@ -33,13 +33,20 @@ function buildXMPXML(m: EmbedMetadata): string {
   const rating = m.rating && m.rating >= 1 && m.rating <= 5
     ? `\n   <xmp:Rating>${m.rating}</xmp:Rating>`
     : '';
+  // Include tiff namespace DPI fields so apps that read XMP first (e.g. Photoshop) get correct resolution
+  const tiffNs = dpi ? '\n    xmlns:tiff="http://ns.adobe.com/tiff/1.0/"' : '';
+  const resolution = dpi
+    ? `\n   <tiff:XResolution>${dpi.x}</tiff:XResolution>` +
+      `\n   <tiff:YResolution>${dpi.y}</tiff:YResolution>` +
+      `\n   <tiff:ResolutionUnit>2</tiff:ResolutionUnit>`
+    : '';
   return `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <rdf:Description rdf:about=""
     xmlns:dc="http://purl.org/dc/elements/1.1/"
     xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-    xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/">
+    xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"${tiffNs}>
    <dc:title><rdf:Alt><rdf:li xml:lang="x-default">${escX(m.title)}</rdf:li></rdf:Alt></dc:title>
    <dc:description><rdf:Alt><rdf:li xml:lang="x-default">${escX(m.description)}</rdf:li></rdf:Alt></dc:description>
    <dc:subject>
@@ -47,7 +54,7 @@ function buildXMPXML(m: EmbedMetadata): string {
 ${kws}
     </rdf:Bag>
    </dc:subject>${rights}${creator}
-   <photoshop:Headline>${escX(m.title)}</photoshop:Headline>${rating}
+   <photoshop:Headline>${escX(m.title)}</photoshop:Headline>${rating}${resolution}
   </rdf:Description>
  </rdf:RDF>
 </x:xmpmeta>
@@ -90,13 +97,13 @@ function u32LE(n: number): Uint8Array {
 
 // ─── JPEG XMP segment (APP1 = FF E1) ─────────────────────────────────────────
 
-function buildJPEGXMP(m: EmbedMetadata): Uint8Array {
+function buildJPEGXMP(m: EmbedMetadata, dpi?: { x: number; y: number }): Uint8Array {
   const ns = ENC.encode('http://ns.adobe.com/xap/1.0/\0');
-  let xml = ENC.encode(buildXMPXML(m));
+  let xml = ENC.encode(buildXMPXML(m, dpi));
   // Truncate keywords if over APP1 max (65533 - ns.length)
   while (ns.length + xml.length + 2 > 65535) {
     const km = { ...m, keywords: m.keywords.slice(0, Math.floor(m.keywords.length * 0.8)) };
-    xml = ENC.encode(buildXMPXML(km));
+    xml = ENC.encode(buildXMPXML(km, dpi));
     if (km.keywords.length === 0) break;
   }
   const payLen = ns.length + xml.length + 2; // +2 for length field itself
@@ -149,17 +156,113 @@ function buildJPEGIPTC(m: EmbedMetadata): Uint8Array {
   return concat(new Uint8Array([0xFF, 0xED]), u16BE(payLen), payload);
 }
 
+// ─── JPEG DPI reader (JFIF APP0 → EXIF IFD0) ─────────────────────────────────
+// Returns dots-per-inch from the original file so it can be re-embedded after
+// metadata injection (otherwise apps that read XMP first default to 96 dpi).
+
+function readJPEGDPI(bytes: Uint8Array): { x: number; y: number } | null {
+  if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return null;
+  let pos = 2;
+  while (pos + 4 <= bytes.length) {
+    if (bytes[pos] !== 0xFF) break;
+    const marker = bytes[pos + 1];
+    if (marker === 0xD9 || marker === 0xDA) break;
+    if (marker >= 0xD0 && marker <= 0xD7) { pos += 2; continue; }
+    const segLen = (bytes[pos + 2] << 8) | bytes[pos + 3];
+    const d = pos + 4; // first payload byte
+
+    // ── JFIF APP0 ──────────────────────────────────────────────────────────
+    if (marker === 0xE0 && segLen >= 14 && d + 11 < bytes.length) {
+      if (bytes[d]===0x4A && bytes[d+1]===0x46 && bytes[d+2]===0x49 && bytes[d+3]===0x46 && bytes[d+4]===0x00) {
+        const unit = bytes[d + 7];
+        const xd = (bytes[d + 8] << 8) | bytes[d + 9];
+        const yd = (bytes[d + 10] << 8) | bytes[d + 11];
+        if (unit === 1 && xd > 0 && yd > 0) return { x: xd, y: yd };
+        if (unit === 2 && xd > 0 && yd > 0) return { x: Math.round(xd * 2.54), y: Math.round(yd * 2.54) };
+      }
+    }
+
+    // ── EXIF APP1 ──────────────────────────────────────────────────────────
+    if (marker === 0xE1 && segLen > 10 && d + 5 < bytes.length) {
+      if (bytes[d]===0x45 && bytes[d+1]===0x78 && bytes[d+2]===0x69 && bytes[d+3]===0x66 && bytes[d+4]===0x00 && bytes[d+5]===0x00) {
+        const t = d + 6; // TIFF header base
+        if (t + 8 > bytes.length) { pos += 2 + segLen; continue; }
+        const le = bytes[t] === 0x49; // 'II' = little-endian
+        const r16 = (o: number) => le ? (bytes[t+o] | (bytes[t+o+1] << 8)) : ((bytes[t+o] << 8) | bytes[t+o+1]);
+        const r32 = (o: number) => (le
+          ? (bytes[t+o] | (bytes[t+o+1]<<8) | (bytes[t+o+2]<<16) | (bytes[t+o+3]<<24))
+          : ((bytes[t+o]<<24) | (bytes[t+o+1]<<16) | (bytes[t+o+2]<<8) | bytes[t+o+3])) >>> 0;
+        if (r16(2) !== 42) { pos += 2 + segLen; continue; }
+        const ifd0 = t + r32(4);
+        if (ifd0 + 2 > bytes.length) { pos += 2 + segLen; continue; }
+        const nTags = r16(ifd0 - t);
+        let xRes = 0, yRes = 0, resUnit = 2;
+        for (let i = 0; i < nTags && i < 64; i++) {
+          const e = ifd0 + 2 + i * 12;
+          if (e + 12 > bytes.length) break;
+          const tag  = le ? (bytes[e] | (bytes[e+1]<<8)) : ((bytes[e]<<8) | bytes[e+1]);
+          const type = le ? (bytes[e+2] | (bytes[e+3]<<8)) : ((bytes[e+2]<<8) | bytes[e+3]);
+          if (tag === 0x0128 && type === 3) {
+            resUnit = le ? (bytes[e+8] | (bytes[e+9]<<8)) : ((bytes[e+8]<<8) | bytes[e+9]);
+          }
+          if ((tag === 0x011A || tag === 0x011B) && type === 5) {
+            const relOff = (le
+              ? (bytes[e+8] | (bytes[e+9]<<8) | (bytes[e+10]<<16) | (bytes[e+11]<<24))
+              : ((bytes[e+8]<<24) | (bytes[e+9]<<16) | (bytes[e+10]<<8) | bytes[e+11])) >>> 0;
+            const vOff = t + relOff;
+            if (vOff + 8 <= bytes.length) {
+              const num = (le
+                ? (bytes[vOff] | (bytes[vOff+1]<<8) | (bytes[vOff+2]<<16) | (bytes[vOff+3]<<24))
+                : ((bytes[vOff]<<24) | (bytes[vOff+1]<<16) | (bytes[vOff+2]<<8) | bytes[vOff+3])) >>> 0;
+              const den = (le
+                ? (bytes[vOff+4] | (bytes[vOff+5]<<8) | (bytes[vOff+6]<<16) | (bytes[vOff+7]<<24))
+                : ((bytes[vOff+4]<<24) | (bytes[vOff+5]<<16) | (bytes[vOff+6]<<8) | bytes[vOff+7])) >>> 0;
+              const val = den > 0 ? num / den : 0;
+              if (tag === 0x011A) xRes = val;
+              else yRes = val;
+            }
+          }
+        }
+        if (xRes > 0 && yRes > 0) {
+          if (resUnit === 3) return { x: Math.round(xRes * 2.54), y: Math.round(yRes * 2.54) };
+          return { x: Math.round(xRes), y: Math.round(yRes) };
+        }
+      }
+    }
+
+    pos += 2 + segLen;
+  }
+  return null;
+}
+
+// Builds a minimal JFIF APP0 segment with the given DPI (dots per inch).
+function buildJFIFAPP0(dpiX: number, dpiY: number): Uint8Array {
+  const seg = new Uint8Array(18);
+  seg[0]=0xFF; seg[1]=0xE0;                                           // APP0 marker
+  seg[2]=0x00; seg[3]=0x10;                                           // length = 16
+  seg[4]=0x4A; seg[5]=0x46; seg[6]=0x49; seg[7]=0x46; seg[8]=0x00;  // "JFIF\0"
+  seg[9]=0x01; seg[10]=0x01;                                          // version 1.1
+  seg[11]=0x01;                                                        // density unit: DPI
+  seg[12]=(dpiX>>8)&0xFF; seg[13]=dpiX&0xFF;                         // Xdensity (BE)
+  seg[14]=(dpiY>>8)&0xFF; seg[15]=dpiY&0xFF;                         // Ydensity (BE)
+  seg[16]=0x00; seg[17]=0x00;                                         // no thumbnail
+  return seg;
+}
+
 // ─── JPEG embedding (parse markers, strip old XMP/IPTC, insert new) ───────────
 
 function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
   const bytes = new Uint8Array(buf);
   if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) throw new Error('Not a valid JPEG file');
 
-  const XMP_NS  = ENC.encode('http://ns.adobe.com/xap/1.0/\0');
-  const PS_HDR  = ENC.encode('Photoshop 3.0\0');
+  // Extract DPI from the original file before modifying anything.
+  // This covers both JFIF APP0 (density_unit 1/2) and EXIF IFD0 (XResolution/YResolution).
+  const dpi = readJPEGDPI(bytes);
+
+  const XMP_NS = ENC.encode('http://ns.adobe.com/xap/1.0/\0');
+  const PS_HDR = ENC.encode('Photoshop 3.0\0');
 
   const kept: Uint8Array[] = [];
-  let insertAfter = 0; // index in `kept` to splice XMP+IPTC after
   let pos = 0;
 
   // SOI
@@ -167,13 +270,9 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
   pos = 2;
 
   while (pos < bytes.length) {
-    if (bytes[pos] !== 0xFF) {
-      kept.push(bytes.slice(pos)); // image data after SOS
-      break;
-    }
+    if (bytes[pos] !== 0xFF) { kept.push(bytes.slice(pos)); break; }
     const marker = bytes[pos + 1];
-
-    if (marker === 0xD9) { kept.push(bytes.slice(pos)); break; } // EOI+rest
+    if (marker === 0xD9) { kept.push(bytes.slice(pos)); break; }
     if (marker === 0xD8) { pos += 2; continue; }
     if (marker >= 0xD0 && marker <= 0xD7) { kept.push(bytes.slice(pos, pos + 2)); pos += 2; continue; }
     if (pos + 3 >= bytes.length) break;
@@ -182,31 +281,26 @@ function embedInJPEG(buf: ArrayBuffer, m: EmbedMetadata): ArrayBuffer {
     const segEnd = pos + 2 + len;
 
     let skip = false;
-    if (marker === 0xE1 && bytesMatch(bytes, pos + 4, XMP_NS))  skip = true; // existing XMP
-    if (marker === 0xED && bytesMatch(bytes, pos + 4, PS_HDR))  skip = true; // existing IPTC
-    // Original EXIF (APP1 Exif) is intentionally preserved — it contains DPI, XResolution,
-    // YResolution, ResolutionUnit and camera data that must not be stripped.
+    if (marker === 0xE0)                                         skip = true; // replace APP0 with DPI-correct one
+    if (marker === 0xE1 && bytesMatch(bytes, pos + 4, XMP_NS))  skip = true; // replace XMP
+    if (marker === 0xED && bytesMatch(bytes, pos + 4, PS_HDR))  skip = true; // replace IPTC
+    // Original EXIF (APP1 "Exif\0\0") is kept — preserves XResolution/YResolution/ResolutionUnit.
 
-    if (!skip) {
-      kept.push(bytes.slice(pos, segEnd));
-      if (marker === 0xE0) insertAfter = kept.length; // insert after APP0
-    }
-
-    if (marker === 0xDA) { kept.push(bytes.slice(segEnd)); break; } // SOS → rest is image data
+    if (!skip) kept.push(bytes.slice(pos, segEnd));
+    if (marker === 0xDA) { kept.push(bytes.slice(segEnd)); break; }
     pos = segEnd;
   }
 
-  // Build insertion point (after APP0 if present, else after SOI)
-  const insertion = insertAfter === 0 ? 1 : insertAfter;
-  const xmpSeg  = buildJPEGXMP(m);
-  const iptcSeg = buildJPEGIPTC(m);
+  // Inject immediately after SOI (index 0 = SOI):
+  //   1. JFIF APP0  — density_unit=1 (DPI) so Windows/WIC reads correct resolution
+  //   2. XMP APP1   — tiff:XResolution/YResolution so Photoshop/Bridge read correct resolution
+  //   3. IPTC APP13 — title, description, keywords, copyright
+  // Original EXIF segment follows in `kept` (third metadata path for resolution).
+  const toInject: Uint8Array[] = [];
+  if (dpi) toInject.push(buildJFIFAPP0(dpi.x, dpi.y));
+  toInject.push(buildJPEGXMP(m, dpi ?? undefined), buildJPEGIPTC(m));
 
-  const before = kept.slice(0, insertion);
-  const after  = kept.slice(insertion);
-
-  // Inject XMP (APP1) + IPTC (APP13) after SOI/APP0. Original EXIF is kept in-place
-  // so DPI, resolution, and camera metadata are never lost.
-  return concat(...before, xmpSeg, iptcSeg, ...after).buffer as ArrayBuffer;
+  return concat(kept[0], ...toInject, ...kept.slice(1)).buffer as ArrayBuffer;
 }
 
 // ─── PNG CRC32 ────────────────────────────────────────────────────────────────
